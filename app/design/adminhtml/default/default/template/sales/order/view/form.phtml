@@ -1,0 +1,22 @@
+<?php
+if(Mage::helper('core')->isModuleEnabled('Linksync_Linksynceparcel'))
+{
+	$order_id = $this->getRequest()->getParam('order_id');
+	$code = Mage::helper('linksynceparcel')->getOrderCarrier($order_id);
+	if($code == 'linksynceparcel')
+	{
+		$valid = Mage::helper('linksynceparcel')->isOrderAddressValid($order_id);
+		if($valid != 1)
+		{
+		?>
+			<div class="address-validation" style="border:1px solid #FFA500; font-size:12px; 
+				font-weight:normal; color:#000; border-radius: 2px; margin:4px; padding: 4px; 
+				background-color:#FFFBF0; word-wrap:break-word">
+			<p><?php echo $valid ?></p>
+			</div>
+		<?php
+		}
+	}
+}
+?>
+<div class="entry-edit" id="sales_order_view"></div>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+<modules>
+<Queenb_Override> <!--Change Queenb To Your Module NameSpace and Override to Your Module name-->
+<version>0.1.0</version>
+</Queenb_Override>
+</modules>
+<frontend>
+<routers>
+<checkout>
+<args>
+<modules>
+<Queenb_Override before="Mage_Checkout">Queenb_Override</Queenb_Override><!--Change Queenb To Your Module NameSpace and Override to Your Module name-->
+</modules>
+</args>
+</checkout>
+</routers>
+</frontend>
+</config>

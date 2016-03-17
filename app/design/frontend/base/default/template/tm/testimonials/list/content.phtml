@@ -1,0 +1,64 @@
+    <?php
+        if (!$this->getIsAjax()) {
+            echo $this->getChildHtml('testimonials.list.title');
+        }
+        $_testimonials = $this->getTestimonials();
+        $_width = Mage::helper('testimonials')->getImageWidth();
+        $_height = Mage::helper('testimonials')->getImageHeight();
+    ?>
+    <?php if($_testimonials->getSize()): ?>
+        <?php foreach ($_testimonials as $_testimonial): ?>
+            <div class="testimonial">
+                <?php if ($image = $this->getImagePath($_testimonial)): ?>
+                <div class="testimonial-image" style="width: <?php echo ($_width + 10) ?>px;text-align:center;">
+                    <img src="<?php echo $this->helper('testimonials/image')->
+                    init($image)->resize($_width, $_height); ?>"
+                    alt="Profile image" />
+                </div>
+                <?php endif ?>
+                <div style="width: auto; margin-left: <?php echo $image ? ($_width + 10) : 0 ?>px">
+                    <div class="content-wrapper">
+                        <div class="message-wrapper">
+                            <div class="message">
+								<h4 class="qbt"><?php echo $_testimonial->getCompany() ?></h4>
+                            	<?php echo $_testimonial->getMessage() ?>
+                            	<br><br>
+                                <span class="author-info"><?php echo $_testimonial->getName() ?></span>
+                            </div>
+                        </div>
+                        <div style="margin: 10px 0 0 <?php echo $image ? 40 : 80 ?>px">
+                            <div class="rating-wrapper ratings-table">
+                                <?php if ($_testimonial->getRating()): ?>
+                                	<?php if ($_testimonial->getRating()>0): ?>
+                                		<div class="rating-title"><?php echo $this->__('Rating') ?></div>
+                                		<div class="rating-box"><div class="rating" style="color:red;width: <?php echo $_testimonial->getRating() / 5 * 100 ?>%;"></div></div>
+                                	<?php endif ?>
+                                <?php endif ?>
+                            </div>
+                            
+                            <div class="testimonial-date" <?php if  ($_testimonial->getDate() == '2015-01-01 00:00:00'): ?>style="visibility: hidden;"<?php endif ?>>
+                                <span><?php echo $this->__('Posted on') ?></span>
+                                <span class="nobr"><?php echo $this->formatDate($_testimonial->getDate(), 'long') ?>
+                                </span>
+                            </div>
+                                
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <p><?php echo $this->__('No testimonials found.'); ?></p>
+    <?php endif ?>
+    <?php if ($_testimonials->getCurPage() * $_testimonials->getPageSize() >= $_testimonials->getSize()): ?>
+        <script type="text/javascript">
+        //<![CDATA[
+            if ($('viewMore')) $('viewMore').hide();
+        //]]>
+        </script>
+    <?php endif ?>
+    <?php
+        if (!$this->getIsAjax()):
+            echo $this->getChildHtml('testimonials.list.bottom');
+        endif
+    ?>

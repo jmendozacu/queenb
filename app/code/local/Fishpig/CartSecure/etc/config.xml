@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <Fishpig_CartSecure />
+    </modules>
+    <frontend>
+        <secure_url>
+            <checkout_cart>/checkout/onepage/</checkout_cart>
+            <checkout>/checkout/onepage/</checkout>
+            
+            <customer_account_login>/customer/account/login/</customer_account_login>
+           
+        </secure_url>
+    </frontend>
+</config>

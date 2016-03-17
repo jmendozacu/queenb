@@ -1,0 +1,111 @@
+<?xml version="1.0"?>
+<config>
+    <tabs>
+        <evince translate="label" module="contactusmap">
+            <label>Contactusmap Configuration</label>
+            <sort_order>20</sort_order>
+        </evince>
+    </tabs>
+	<sections>
+		<contactusmap translate="label" module="contactusmap">
+			<label>Contact Us Map</label>
+			<tab>evince</tab>
+			<frontend_type>text</frontend_type>
+			<sort_order>377</sort_order>
+			<show_in_default>1</show_in_default>
+			<show_in_website>1</show_in_website>
+			<show_in_store>1</show_in_store>
+			<groups>
+                <contactusmap translate="label" module="contactusmap">
+					<label>Map Configuration</label>
+					<frontend_type>text</frontend_type>
+					<sort_order>240</sort_order>
+					<show_in_default>1</show_in_default>
+					<show_in_website>1</show_in_website>
+					<show_in_store>1</show_in_store>
+					<fields>
+						<enable translate="label">
+							<label>Enable:</label>
+							<comment></comment>
+							<frontend_type>select</frontend_type>
+							<sort_order>112</sort_order>
+							<show_in_default>1</show_in_default>
+							<show_in_website>1</show_in_website>
+							<show_in_store>1</show_in_store>
+							<can_be_empty>1</can_be_empty>
+                        	<source_model>adminhtml/system_config_source_enabledisable</source_model>
+						</enable>
+                        <contactusmapapikey translate="label">
+							<label>Map Api Url</label>
+							<comment>Api url for map Here(like http://maps.google.com/maps/api/js?sensor=true)</comment>
+							<frontend_type>text</frontend_type>
+							<sort_order>115</sort_order>
+							<show_in_default>1</show_in_default>
+							<show_in_website>1</show_in_website>
+							<show_in_store>1</show_in_store>
+							<can_be_empty>1</can_be_empty>
+						</contactusmapapikey>
+                                                
+                        <contactusmapaddress translate="label">
+							<label>Store Address:</label>
+							<comment>Your store address </comment>
+							<frontend_type>textarea</frontend_type>
+							<sort_order>120</sort_order>
+							<show_in_default>1</show_in_default>
+							<show_in_website>1</show_in_website>
+							<show_in_store>1</show_in_store>
+							<can_be_empty>1</can_be_empty>
+						</contactusmapaddress>
+						
+						<contactusmapmarkerimg translate="label">
+							<label>Marker Image:</label>
+							<comment>Upload Custom Marker Image</comment>
+							<frontend_type>image</frontend_type>
+                            <backend_model>adminhtml/system_config_backend_image</backend_model>
+                            <upload_dir config="system/filesystem/media" scope_info="1">map/images</upload_dir>
+                            <base_url type="media" scope_info="1">map/images</base_url>
+							<sort_order>130</sort_order>
+							<show_in_default>1</show_in_default>
+							<show_in_website>1</show_in_website>
+							<show_in_store>1</show_in_store>
+							<can_be_empty>1</can_be_empty>
+							<!--<source_model>allcurrency/type</source_model>-->
+						</contactusmapmarkerimg>
+						
+                        <contactusmapheight translate="label">
+							<label>Map Height:</label>
+							<comment> Height for Map </comment>
+							<frontend_type>text</frontend_type>
+							<sort_order>130</sort_order>
+							<show_in_default>1</show_in_default>
+							<show_in_website>1</show_in_website>
+							<show_in_store>1</show_in_store>
+							<can_be_empty>1</can_be_empty>
+							<!--<source_model>allcurrency/type</source_model>-->
+						</contactusmapheight>
+                                                
+						<contactusmappagelayout translate="label">
+							<label>Page layout</label>
+							<comment>you can change contact us page layout</comment>
+							<frontend_type>select</frontend_type>
+							<sort_order>140</sort_order>
+							<show_in_default>1</show_in_default>
+							<show_in_website>1</show_in_website>
+							<show_in_store>1</show_in_store>
+							<can_be_empty>1</can_be_empty>
+							<source_model>contactusmap/layoutoptions</source_model>
+						</contactusmappagelayout>
+                                                 
+						
+                                               
+					</fields>
+                                        
+                                   </contactusmap>
+                                     
+                                    
+			</groups>        
+                        
+                        
+		</contactusmap>
+	</sections>
+</config>

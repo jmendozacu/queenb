@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<config>
+	<extendware>
+		<quickaccess>
+			<ewpromoconditions>
+                <resource>extendware/ewpromoconditions</resource>
+				<children>
+					<promo_quote translate="title" module="ewpromoconditions">
+						<title>Shopping Cart Price Rules</title>
+						<action>adminhtml/promo_quote/</action>
+						<resource>promo/quote</resource>
+						<sort_order>1</sort_order>
+					</promo_quote>
+				</children>
+				<title/>
+			</ewpromoconditions>
+		</quickaccess>
+	</extendware>
+	<acl>
+		<resources>
+            <admin>
+                <children>
+                    <extendware translate="title" module="ewpromoconditions">
+                    	<title>Extendware</title>
+                    	<sort_order>0</sort_order>
+                        <children>
+                        	<ewpromoconditions translate="title" module="ewpromoconditions">
+                        		<title>Promotional Rules</title>
+                        		<children>
+                        			<settings translate="title">
+                        				<title>Settings</title>
+                        				<children>
+				                            <main translate="title">
+				                                <title>Main</title>
+				                                <children>
+					                                <ewpromoconditions translate="title">
+						                                <title>General</title>
+						                            </ewpromoconditions>
+					                            </children>
+				                            </main>
+			                            </children>
+			            			</settings>
+			            		</children>
+			            	</ewpromoconditions>
+                        </children>
+                    </extendware>
+                </children>
+            </admin>
+        </resources>
+	</acl>
+</config>

@@ -1,0 +1,42 @@
+"Age of account","Age of account"
+"All Time","All Time"
+"Amount spent during the last","Amount spent during the last"
+"Average order amount during the last","Average order amount during the last"
+"Condition period magnitude  must be greater than 0","Condition period magnitude  must be greater than 0"
+"Condition period type is not valid","Condition period type is not valid"
+"Condition value must be a positive number","Condition value must be a positive number"
+"Conditions Combination","Conditions Combination"
+Configuration,Configuration
+Customer,Customer
+"Customer Attribute Information","Customer Attribute Information"
+"Customer Purchase Information","Customer Purchase Information"
+"Customer Segment","Customer Segment"
+Day(s),Day(s)
+"equal to","equal to"
+"equals or greater than","equals or greater than"
+"equals or less than","equals or less than"
+Extendware,Extendware
+"Extendware Price Rule Conditions","Extendware Price Rule Conditions"
+General,General
+"greater than","greater than"
+ID,ID
+"If a %s %s %s of these conditions:","If a %s %s %s of these conditions:"
+"If enabled, then discounts will not be applied to products with special prices.","If enabled, then discounts will not be applied to products with special prices."
+is,is
+"less than","less than"
+Main,Main
+"Manage Sales Rules","Manage Sales Rules"
+matches,matches
+Month(s),Month(s)
+"not equal to","not equal to"
+"Number of purchases during the last","Number of purchases during the last"
+"Please <u>read the help descriptions, field descriptions, fieldset descriptions, and user guides</u> so you may configure this extension to suit your needs.","Please <u>read the help descriptions, field descriptions, fieldset descriptions, and user guides</u> so you may configure this extension to suit your needs."
+"Please select an item(s) before submitting to the mass processor","Please select an item(s) before submitting to the mass processor"
+"Promotional Rules","Promotional Rules"
+"Selected item(s) (%d) have been mass processed by the %s processor","Selected item(s) (%d) have been mass processed by the %s processor"
+"Selected item(s) (%d) have failed to be mass processed by the %s processor","Selected item(s) (%d) have failed to be mass processed by the %s processor"
+Settings,Settings
+"Shopping Cart Price Rules","Shopping Cart Price Rules"
+"Skip Special Priced Products","Skip Special Priced Products"
+Week(s),Week(s)
+Year(s),Year(s)

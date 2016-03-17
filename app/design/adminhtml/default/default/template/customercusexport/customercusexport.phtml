@@ -1,0 +1,103 @@
+<div class="content-header">
+  <table cellspacing="0">
+    <tbody>
+      <tr>
+        <td style="width:50%;"><h3 class="icon-head head-adminhtml-banner">Customer Report</h3></td>
+        <td class="form-buttons">&nbsp;</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<form method="post" name="frmAtt" id="frmAtt" enctype="multipart/form-data" action="<?php echo $this->getBaseUrl();?>customercusexport/adminhtml_customercusexport/savecsv">
+  <table cellspacing="0" class="actions">
+    <tbody>
+      <tr>
+        <td class="a-left filter"><div class="f-left">
+            <div>From:&nbsp;
+              <input type="text" style="width:5em" value="" name="report_from" id="period_date_from" class="input-text no-changes required-entry">
+              <img class="v-middle" alt="Select Date" id="period_date_from_trig" title="Select Date" src="<?php echo $this->getSkinUrl('images/grid-cal.gif');?>">&nbsp;&nbsp;</div>
+            <div id="period_date_from_advaice"></div>
+          </div>
+          <div class="f-left">
+            <div>To:&nbsp;
+              <input type="text" style="width:5em" value="" name="report_to" id="period_date_to" class="input-text no-changes required-entry">
+              <img alt="Select Date" id="period_date_to_trig" title="Select Date" class="v-middle" src="<?php echo $this->getSkinUrl('images/grid-cal.gif');?>">&nbsp;&nbsp;</div>
+            <div id="period_date_to_advaice"></div>
+          </div>
+          
+          <script type="text/javascript">
+
+                Calendar.setup({
+                    inputField : 'period_date_from',
+                    ifFormat : '%m/%e/%Y',
+                    button : 'period_date_from_trig',
+                    align : 'Bl',
+                    singleClick : true
+                });
+                Calendar.setup({
+                    inputField : 'period_date_to',
+                    ifFormat : '%m/%e/%Y',
+                    button : 'period_date_to_trig',
+                    align : 'Bl',
+                    singleClick : true
+                });
+
+                </script></td>
+        <td class="a-right"><img class="v-middle" alt="" src="<?php echo $this->getSkinUrl('images/icon_export.gif');?>">&nbsp; Export to:
+          <select style="width:8em;" id="gridSupplierSold_export" name="gridSupplierSold_export">
+            <option value="csv" selected="selected">CSV</option>
+          </select>
+          <button style="" onclick="CusExport()" class="scalable task" type="button" title="Export" id="idekpt"><span><span><span>Export</span></span></span></button></td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <input name="form_key" type="hidden" value="<?php echo Mage::getSingleton('core/session')->getFormKey() ?>" />
+</form>
+<script type="text/javascript">
+    //<![CDATA[
+    var contactForm = new VarienForm('frmAtt', true);
+    //]]>
+</script> 
+<script language="javascript">
+function funcresult()
+{
+	if(document.getElementById('period_date_from').value==""){
+		alert('Please select from date');
+		return;
+	}
+	if(document.getElementById('period_date_to').value==""){
+		alert('Please select from date');
+		return;
+	}
+		var request = new Ajax.Request(
+        	'<?php echo $this->getUrl("supplierreportcus/index/supordsearch") ?>',
+           	{
+            	method: 'post',	
+                onComplete: function(transport){
+                	var jsonResponse=transport.responseText;
+                	if(jsonResponse.error){
+                		alert("Error Occured");
+                	}
+                	else{
+                		document.getElementById('suppgridval').innerHTML=jsonResponse;
+                	}		
+                },		
+                parameters: Form.serialize($("frmAtt"))
+        	}
+        );
+
+}
+function CusExport(){
+	if(document.getElementById('period_date_from').value==""){
+		alert('Please select from date');
+		return;
+	}
+	if(document.getElementById('period_date_to').value==""){
+		alert('Please select from date');
+		return;
+	}
+	document.frmAtt.action='<?php echo Mage::getUrl('customercusexport/adminhtml_customercusexport/savecsv',array('_secure'=>true));?>';
+	document.frmAtt.submit();
+}
+</script>

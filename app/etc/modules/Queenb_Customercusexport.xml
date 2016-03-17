@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <Queenb_Customercusexport>
+            <active>true</active>
+            <codePool>local</codePool>
+        </Queenb_Customercusexport>
+    </modules>
+</config> 

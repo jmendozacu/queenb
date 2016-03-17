@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<layout version="0.1.0">
+    <default>
+    </default>
+    <productshowrule_index_index>
+        <reference name="content">
+            <block type="productshowrule/productshowrule" name="productshowrule" template="productshowrule/productshowrule.phtml" />
+        </reference>
+    </productshowrule_index_index>
+</layout> 

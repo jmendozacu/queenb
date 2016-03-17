@@ -1,0 +1,17 @@
+<?php
+$testimonial = Mage::getModel('tm_testimonials/data')->getCollection()
+    ->addFieldToSelect('*')
+    ->addStoreFilter(Mage::app()->getStore())
+    ->addFieldToFilter('status', TM_Testimonials_Model_Data::STATUS_ENABLED)
+    ->setOrder('date', 'desc')
+    ->setPageSize(1)
+    ->getFirstItem();
+$charLimit = 400;
+$content = $testimonial->getMessage();
+if ( strlen($content) > $charLimit ) {
+    $content = substr($content, 0, $charLimit);
+    $content .= '<br /><a href="'.$this->getUrl('testimonials').'">read on ...</a>';
+}
+?>
+<h4 style="display: inline-block;"><?php echo $testimonial->getCompany() ?></h4>
+<p><?php echo nl2br($content) ?></p>

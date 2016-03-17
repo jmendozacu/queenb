@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <Queenb_Productshowrule>
+            <active>true</active>
+            <codePool>local</codePool>
+        </Queenb_Productshowrule>
+    </modules>
+</config> 

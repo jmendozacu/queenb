@@ -1,0 +1,108 @@
+<div class="content-header">
+    <table cellspacing="0">
+        <tbody><tr>
+            <td style="width:50%;"><h3 class="icon-head head-adminhtml-banner">Set Products for a Customer Group</h3></td>
+            <td class="form-buttons"><span id="spmsgqty"></span></td>
+        </tr>
+    </tbody></table>
+</div>
+
+
+<form method="post" name="frmAtt" id="frmAtt" enctype="multipart/form-data" action="<?php echo Mage::getStoreConfig(Mage_Core_Model_Url::XML_PATH_UNSECURE_URL);?>productshowrule/adminhtml_productshowrule/saveproduct">
+<input name="txtaction" id="txtaction" type="hidden" />
+<table cellpadding="10" cellspacing="10">
+	<tr>
+        <td><strong>Select Customer Group</strong></td><td></td>
+    </tr>
+    <tr>
+        <td> <select name="selcusgroup" id="selcusgroup" onchange="funprodfetch(this.value)" style="width:150px;">
+        	  <option value="">Select Group</option>
+              <option value="0">NOT LOGGED IN</option>
+              <option value="1">General</option>
+              <option value="2">Wholesale</option>
+              <option value="3">Reseller</option>
+              </select> 
+</td><td><input type="button" name="btmupload" onclick="frmsavedataupload()" value="Submit" /></td>
+        
+        
+    </tr>
+    <tr>
+    <td colspan="2">
+    <a href="#" onclick="form_select()">Select All</a>&nbsp;&nbsp;<a href="#" onclick="form_deselect()">Deselect All</a><br />
+    <span id="spprod"></span></td>
+    </tr>
+</table>
+
+<input name="form_key" type="hidden" value="<?php echo Mage::getSingleton('core/session')->getFormKey();?>" />
+</form>
+
+<script>
+function frmsavedataupload(){
+	if(document.getElementById('selcusgroup').value==""){
+		alert('Please select customer group');
+		document.getElementById('selcusgroup').focus();
+		return;
+	}
+	
+	document.frmAtt.submit();
+
+}
+function funprodfetch(e){
+	handlerFunction(e);
+}
+function handlerFunction(gid){
+	
+		
+		/*			alert('REQUEST');	
+*/
+
+/*
+window.prompt('URL','<?php echo Mage::getStoreConfig(Mage_Core_Model_Url::XML_PATH_UNSECURE_URL );?>productshowrule/adminhtml_productshowrule/fetchproduct?gid='+gid + '&isAjax=1');
+*/
+		var request = new Ajax.Request(
+        	'<?php echo Mage::getStoreConfig(Mage_Core_Model_Url::XML_PATH_UNSECURE_URL );?>productshowrule/adminhtml_productshowrule/fetchproduct?gid='+gid + '&isAjax=1',
+           	{
+            	method: 'post',	
+                onComplete: function(transport){
+				
+					
+				
+                	var jsonResponse=transport.responseText;
+                	if(jsonResponse.error){
+                		alert("Error Occured");
+                	}
+                	else{
+                		
+						document.getElementById('spprod').innerHTML=jsonResponse;
+                	}		
+                },		
+                parameters: Form.serialize($("frmAtt"))
+        	}
+        );
+}
+function form_select()
+{
+ for(var j = 0; j < document.frmAtt["checkboxvar[]"].length; j++)
+ {
+  if (document.frmAtt["checkboxvar[]"][j].checked == false)
+  {
+   document.frmAtt["checkboxvar[]"][j].checked = true;
+  }
+ }
+}
+
+
+function form_deselect()
+{
+ for(var j = 0; j < document.frmAtt["checkboxvar[]"].length; j++)
+ {
+  if (document.frmAtt["checkboxvar[]"][j].checked == true)
+  {
+   document.frmAtt["checkboxvar[]"][j].checked = false;
+  }
+ }
+}
+</script>
+
+
+

@@ -1,0 +1,12 @@
+<div class="testimonials-list">
+    <?php if (is_null($this->getShowTitle()) || $this->getShowTitle()): ?>
+        <div class="page-title">
+            <h1><?php echo $this->__('Letters from Lovers') ?></h1>
+            <div class="submit-testimonial">
+                <button class="button" onclick="setLocation('<?php echo $this->getUrl('testimonials/index/new'); ?>')">
+                    <?php echo $this->__('Submit Your Letter') ?>
+                </button>
+            </div>
+        </div>
+    <?php endif ?>
+    <div class="testimonials">

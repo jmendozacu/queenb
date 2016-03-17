@@ -1,0 +1,95 @@
+<?xml version="1.0"?>
+<layout>
+    <adminhtml_system_config_edit>
+        <reference name="head">
+            <action method="addJs">
+                <file>jscolor/jscolor.js</file>
+            </action>
+        </reference>
+    </adminhtml_system_config_edit>
+    <!--Manage field position-->
+    <securedcheckoutadmin_adminhtml_field_position_index>
+        <reference name="head">
+            <action method="addJs">
+                <file>magecheckout/securedcheckout/jquery/jquery-1.11.1.min.js</file>
+            </action>
+            <action method="addJs">
+                <file>magecheckout/securedcheckout/jquery/jquery-noconflict.js</file>
+            </action>
+            <action method="addJs">
+                <script>magecheckout/securedcheckout/jquery/jquery-ui.min.js</script>
+            </action>
+            <action method="addCss">
+                <stylesheet>css/magecheckout/securedcheckout/field/position.css</stylesheet>
+            </action>
+            <action method="addCss">
+                <stylesheet>css/magecheckout/securedcheckout/field/jquery-ui.min.css</stylesheet>
+            </action>
+        </reference>
+        <reference name="content">
+            <block type="securedcheckout/adminhtml_field_position" name="securedcheckout_field_position"
+                   template="magecheckout/securedcheckout/field/position.phtml"
+                    />
+        </reference>
+    </securedcheckoutadmin_adminhtml_field_position_index>
+    <!--Manage Custom Block Rule-->
+    <securedcheckoutadmin_adminhtml_customblock_shoppingcart_index>
+        <reference name="content">
+            <block type="securedcheckout/adminhtml_customblock_shoppingcart" name="customblock.shoppingcart"/>
+        </reference>
+    </securedcheckoutadmin_adminhtml_customblock_shoppingcart_index>
+    <!--Adminhtml order view-->
+    <!-- Order -->
+    <adminhtml_sales_order_view>
+        <reference name="order_totals">
+            <block type="securedcheckout/adminhtml_totals_order_giftwrap" name="order.giftwrap.view"/>
+        </reference>
+        <reference name="order_item_extra_info">
+            <block type="securedcheckout/adminhtml_totals_order_view_tab_survey"
+                   as="securedcheckout_order"/>
+            <block type="securedcheckout/adminhtml_totals_order_view_tab_delivery"
+                   as="securedcheckout_order"/>
+        </reference>
+    </adminhtml_sales_order_view>
+    <adminhtml_sales_order_invoice_new>
+        <reference name="invoice_totals">
+            <block type="securedcheckout/adminhtml_totals_invoice_giftwrap" name="invoice.giftwrap.new"/>
+        </reference>
+    </adminhtml_sales_order_invoice_new>
+    <adminhtml_sales_order_invoice_updateqty>
+        <reference name="invoice_totals">
+            <block type="securedcheckout/adminhtml_totals_invoice_giftwrap" name="invoice.giftwrap.updateqty"/>
+        </reference>
+    </adminhtml_sales_order_invoice_updateqty>
+
+    <adminhtml_sales_order_invoice_view>
+        <reference name="invoice_totals">
+            <block type="securedcheckout/adminhtml_totals_invoice_giftwrap" name="invoice.giftwrap.view"/>
+        </reference>
+    </adminhtml_sales_order_invoice_view>
+    <adminhtml_sales_order_invoice_print>
+        <reference name="invoice_totals">
+            <block type="securedcheckout/adminhtml_totals_invoice_giftwrap" name="invoice.giftwrap.print"/>
+        </reference>
+    </adminhtml_sales_order_invoice_print>
+    <adminhtml_sales_order_invoice_email>
+        <reference name="invoice_totals">
+            <block type="securedcheckout/adminhtml_totals_invoice_giftwrap" name="invoice.giftwrap.email"/>
+        </reference>
+    </adminhtml_sales_order_invoice_email>
+    <adminhtml_sales_order_creditmemo_new>
+        <reference name="creditmemo_totals">
+            <block type="securedcheckout/adminhtml_totals_creditmemo_giftwrap" name="credimemo.giftwrap.new"/>
+        </reference>
+    </adminhtml_sales_order_creditmemo_new>
+    <adminhtml_sales_order_creditmemo_view>
+        <reference name="creditmemo_totals">
+            <block type="securedcheckout/adminhtml_totals_creditmemo_giftwrap" name="credimemo.giftwrap.view"/>
+        </reference>
+    </adminhtml_sales_order_creditmemo_view>
+    <adminhtml_sales_order_creditmemo_updateqty>
+        <reference name="creditmemo_totals">
+            <block type="securedcheckout/adminhtml_totals_creditmemo_giftwrap" name="credimemo.giftwrap.updateqty"/>
+        </reference>
+    </adminhtml_sales_order_creditmemo_updateqty>
+</layout>

@@ -1,0 +1,335 @@
+<?php
+$maxbox=1000;
+?>
+
+<div class="content-header">
+    <table cellspacing="0">
+        <tbody><tr>
+            <td style="width:50%;"><h3 class="icon-head head-adminhtml-banner">Create a carton quantity set</h3></td>
+            <td class="form-buttons"><span id="spmsgqty"></span></td>
+        </tr>
+    </tbody></table>
+</div>
+
+
+<form method="post" name="frmAtt" id="frmAtt" enctype="multipart/form-data" action="<?php Mage::getStoreConfig(Mage_Core_Model_Url::XML_PATH_SECURE_URL);?>qtymgnt/adminhtml_qtymgnt/saveset">
+<input name="txtaction" id="txtaction" type="hidden" />
+<table cellpadding="10" cellspacing="10">
+	<tr>
+    	<td><strong>Name of the set</strong></td>
+        <td><strong>Customer Section</strong></td>
+        <td><strong>Qty Section</strong></td>
+        <td><strong>Product Section</strong></td>
+    </tr>
+    <tr>
+    	<td><input type="text" name="txtsetname" id="txtsetname" /></td>
+        <td> <select name="selcusgroup" id="selcusgroup" onchange="funprodfetch(this.value)" style="width:150px;">
+        	  <option value="">Select Group</option>
+              <option value="0">NOT LOGGED IN</option>
+              <option value="1">General</option>
+              <option value="2">Wholesale</option>
+              <option value="3">Reseller</option>
+              </select> 
+</td>
+        <td>
+        	<input type="button" id="btnsec1" onclick="frmshowqty(1);return false" value="Show Qty section" />
+            <div id="pop1" class="popshow">
+            	<div class="close" onclick="closediv(1);return false;">[X]</div>
+                <div class="conarea">
+                <p>Carton is multiples of <input type="text" value="0" name="txtqtymultiply" id="txtqtymultiply" />&nbsp;<input type="button" value="Calculate" onclick="funcalvalue();return false;" />&nbsp;<input type="button" value="Clear all" onclick="funqtyaddclearall();return false;" />
+                
+                &nbsp;Clear from : <input type="text" value="10" name="txtqtymultiplyclearfrom" id="txtqtymultiplyclearfrom" /> <input type="button" value="Clear" onclick="funqtyaddclearfrom();return false;" />
+                </p>
+                <p>
+                <textarea name="tareaaddqty" id="tareaaddqty" style="width:417px;height:417px;"></textarea>
+                <?php /*for($i=1;$i<=$maxbox;$i++){?>
+                <input type="text" style="width:20px;" name="txtqtyadd<?php echo $i;?>" id="txtqtyadd<?php echo $i;?>" value="" />&nbsp;
+                <?php }*/ ?>
+                </p>
+                </div>
+            
+            </div>
+        </td>
+        <td><input type="button" id="btnsecp1" onclick="frmshowqtyp(1);return false" value="Show Product Selection" />
+            <div id="popp1" class="popshow">
+            	<div class="close" onclick="closedivp(1);return false;">[X]</div>
+                <div class="conarea">
+                <a href="#" onclick="SetAllCheckBoxes("frmAtt", "checkboxvar", "true");"> Select All</a>
+                <span id="sporodadd1">Select customer group please.</span></div>
+            
+            </div></td>
+    </tr>
+    <tr><td colspan="4"><input type="button" name="btmupload" onclick="frmsavedataupload()" value="Submit" /></td></tr>
+    <tr><td colspan="4">
+    <table cellpadding="10" cellspacing="10">
+    	<tr><td><b>Set Name</b></td><td><b>Customer Group</b></td><td>&nbsp;</td></tr>
+        
+        <?php
+		$cgarray=array("NOT LOGGED IN","General","Wholesale","Reseller");
+        $write = Mage::getSingleton('core/resource')->getConnection('core_write');
+		$readresultweight=$write->query("select * from mg_qtymgnt order by title asc");
+  		$AllDataresults=$readresultweight->fetchAll();
+		foreach ($AllDataresults as $result)
+		{
+			$title=$result['title'];
+			$qtymgnt_id=$result['qtymgnt_id'];
+			$groupp=$cgarray[$result['customergroup']];
+			
+			echo "<tr><td>$title</td><td>$groupp</td><td><a href='#' onclick='funsetedit($qtymgnt_id);return false;'>Edit</a>&nbsp;&nbsp;&nbsp;<a href='#' onclick='funsetdelete($qtymgnt_id);return false;'>Delete</a></td></tr>";
+		}
+		?>
+    </table>
+    </td></tr>
+    <tr><td colspan="4"></td></tr>
+</table>
+<div><span id="spqtysetedit"></span></div>
+<input name="form_key" type="hidden" value="<?php echo Mage::getSingleton('core/session')->getFormKey();?>" />
+</form>
+
+
+<script type="text/javascript">
+    //<![CDATA[
+    var contactForm = new VarienForm('frmAtt', true);
+    //]]>
+</script>
+<script language="javascript">
+function formsaveedit(){
+	document.frmAtt.action="<?php echo Mage::getStoreConfig(Mage_Core_Model_Url::XML_PATH_SECURE_URL);?>qtymgnt/adminhtml_qtymgnt/saveeditdata";
+	document.frmAtt.submit();
+}
+function funsetedit(e){
+	
+		var request = new Ajax.Request(
+        	'<?php echo Mage::getStoreConfig(Mage_Core_Model_Url::XML_PATH_SECURE_URL);?>qtymgnt/adminhtml_qtymgnt/editdata?id='+e,
+           	{
+            	method: 'post',	
+                onComplete: function(transport){
+                	var jsonResponse=transport.responseText;
+                	if(jsonResponse.error){
+                		alert("Error Occured");
+                	}
+                	else{
+                		//window.location.href=jsonResponse.url;
+						document.getElementById('spqtysetedit').innerHTML=jsonResponse;
+                	}		
+                },		
+                parameters: Form.serialize($("frmAtt"))
+        	}
+        );
+
+}
+function funsetdelete(e){
+	var result = confirm("Want to delete?");
+	if (result) {
+		document.frmAtt.action="<?php echo Mage::getStoreConfig(Mage_Core_Model_Url::XML_PATH_SECURE_URL);?>qtymgnt/adminhtml_qtymgnt/deleteset?id="+e;
+		document.frmAtt.submit();
+	}
+}
+function frmsavedataupload(){
+	if(document.getElementById('txtsetname').value==""){
+		alert('Please enter set name');
+		document.getElementById('txtsetname').focus();
+		return;
+	}
+	if(document.getElementById('selcusgroup').value==""){
+		alert('Please select customer group');
+		document.getElementById('selcusgroup').focus();
+		return;
+	}
+	if(document.getElementById('tareaaddqty').value==""){
+		alert('Please enter Qty.');
+		return;
+	}
+	//document.frmAtt.submit();
+	handlerFunctionsave();
+}
+function SetAllCheckBoxes(FormName, FieldName, CheckValue)
+{
+	if(!document.forms[FormName])
+		return;
+	var objCheckBoxes = document.forms[FormName].elements[FieldName];
+	if(!objCheckBoxes)
+		return;
+	var countCheckBoxes = objCheckBoxes.length;
+	if(!countCheckBoxes)
+		objCheckBoxes.checked = CheckValue;
+	else
+		// set the check value for all check boxes
+		for(var i = 0; i < countCheckBoxes; i++)
+			objCheckBoxes[i].checked = CheckValue;
+}
+
+
+function funprodfetch(e){
+	handlerFunction(e);
+}
+function funqtyaddclearfrom(){
+	var j=document.getElementById('txtqtymultiply').value;
+	var jj=document.getElementById('txtqtymultiply').value;
+	var ja=document.getElementById('txtqtymultiplyclearfrom').value;
+	var st="";
+	for(var i=1;i<=ja;i++){
+		st=st+jj+','
+		jj=parseInt(jj)+parseInt(j);
+	}
+	document.getElementById('tareaaddqty').value=st;
+}
+function funqtyaddclearfromedit(){
+	var j=document.getElementById('txtqtymultiplyedit').value;
+	var jj=document.getElementById('txtqtymultiplyedit').value;
+	var ja=document.getElementById('txtqtymultiplyclearfromedit').value;
+	var st="";
+	for(var i=1;i<=ja;i++){
+		st=st+jj+','
+		jj=parseInt(jj)+parseInt(j);
+	}
+	document.getElementById('tareaaddqtyedit').value=st;
+}
+function funqtyaddclearall(){
+	document.getElementById('tareaaddqty').value='';
+}
+function funqtyaddclearalledit(){
+	document.getElementById('tareaaddqtyedit').value='';
+}
+function funcalvalue(){
+	var j=document.getElementById('txtqtymultiply').value;
+	var jj=document.getElementById('txtqtymultiply').value;
+	var st="";
+	for(var i=1;i<<?php echo $maxbox;?>;i++){
+		st=st+jj+','
+		jj=parseInt(jj)+parseInt(j);
+	}
+	document.getElementById('tareaaddqty').value=st;
+	
+}
+function funcalvalueedit(){
+	var j=document.getElementById('txtqtymultiplyedit').value;
+	var jj=document.getElementById('txtqtymultiplyedit').value;
+	var st="";
+	for(var i=1;i<<?php echo $maxbox;?>;i++){
+		st=st+jj+','
+		jj=parseInt(jj)+parseInt(j);
+	}
+	document.getElementById('tareaaddqtyedit').value=st;
+	
+}
+function frmshowqtyp(e){
+	document.getElementById('popp'+e).style.display="inline";
+	document.getElementById('btnsecp'+e).style.display="none";
+}
+function closedivp(e){
+	document.getElementById('popp'+e).style.display="none";
+	document.getElementById('btnsecp'+e).style.display="inline";
+}
+function frmshowqty(e){
+	document.getElementById('pop'+e).style.display="inline";
+	document.getElementById('btnsec'+e).style.display="none";
+}
+function closediv(e){
+	document.getElementById('pop'+e).style.display="none";
+	document.getElementById('btnsec'+e).style.display="inline";
+}
+function frmcsvdataupload()
+{
+	document.frmAtt.submit();
+}
+function handlerFunction(gid){
+		var request = new Ajax.Request(
+        	'<?php echo Mage::getStoreConfig(Mage_Core_Model_Url::XML_PATH_SECURE_URL);?>qtymgnt/adminhtml_qtymgnt/fetchproduct?gid='+gid + '&isAjax=1',
+           	{
+            	method: 'post',	
+                onComplete: function(transport){
+                	var jsonResponse=transport.responseText;
+                	if(jsonResponse.error){
+                		alert("Error Occured");
+                	}
+                	else{
+                		//window.location.href=jsonResponse.url;
+						document.getElementById('sporodadd1').innerHTML=jsonResponse;
+                	}		
+                },		
+                parameters: Form.serialize($("frmAtt"))
+        	}
+        );
+}
+
+function handlerFunctionsave(){
+		var request = new Ajax.Request(
+        	'<?php echo Mage::getStoreConfig(Mage_Core_Model_Url::XML_PATH_SECURE_URL);?>qtymgnt/adminhtml_qtymgnt/saveset',
+           	{
+            	method: 'post',	
+                onComplete: function(transport){
+                	var jsonResponse=transport.responseText;
+                	if(jsonResponse.error){
+                		alert("Error Occured");
+                	}
+                	else{
+                		//window.location.href=jsonResponse.url;
+						if(jsonResponse=="done"){
+							//document.getElementById('spmsgqty').innerHTML='<span class="dsuccess">Data save successfully...</span>';
+							//document.getElementById('sporodadd1').innerHTML="";
+							window.location.href="https://www.queenb.com.au/qtymgnt/adminhtml_qtymgnt/";
+						}
+						else
+						{
+							document.getElementById('spmsgqty').innerHTML='<span class="derror">'+jsonResponse+'</span>';
+						}
+                	}		
+                },		
+                parameters: Form.serialize($("frmAtt"))
+        	}
+        );
+}
+
+
+</script>
+<style>
+.popshow{
+	background: #a1a1a1 none repeat scroll 0 0;
+    border: 2px solid #000000;
+    height: 460px;
+    left: 146px;
+    padding: 10px;
+    position: fixed;
+    top: 123px;
+    width: 1030px;
+	display:none;
+}
+.popshow .close{
+	cursor: pointer;
+    font-size: 20px;
+    position: absolute;
+    right: -24px;
+    top: -20px;
+}
+.popshow .conarea{
+	background: #c3c3c3 none repeat scroll 0 0;
+    height: 461px;
+	overflow:auto;
+}
+.derror{
+	background: #ff9797 none repeat scroll 0 0;
+    border: 1px solid #9e0000;
+    color: #9e0000;
+    font-size: 16px;
+    font-weight: bold;
+    margin-right: 20px;
+    padding: 3px 5px;
+}
+.dsuccess{
+	background: #9affa4 none repeat scroll 0 0;
+    border: 1px solid #00760b;
+    color: #00760b;
+    font-size: 16px;
+    font-weight: bold;
+    margin-right: 20px;
+    padding: 3px 5px;
+}
+</style>
+
+<?php /*?><input type="button" id="btnsec2" onclick="frmshowqty(2);return false" value="Show Product section" />
+            <div id="pop2" class="popshow">
+            	<div class="close" onclick="closediv(2);return false;">[X]</div>
+                <div class="conarea">dsfsf tyrty htr</div>
+            
+            </div><?php */?>

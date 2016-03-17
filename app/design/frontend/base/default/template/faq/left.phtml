@@ -1,0 +1,17 @@
+<?php $categories = $this->getFaqCategories();?>
+<?php if (count($categories)):?>
+<div class="block block-faq">
+	<div class="block-title">
+		<strong><span style="font-size:16px;font-weight:600;"><?php echo $this->__('FAQ Categories') ?></span></strong>
+	</div>	
+	<div class="block-content">
+		<ul class="accordion accordion-style1 vertnav vertnav-side clearer">
+		<?php foreach ($categories as $category):?>
+			<li class="nav-item level0"><a href="<?php echo $this->getCategoryUrl($category)?>" title="<?php echo $category->getCategoryName();?>">
+				<span><?php echo $category->getCategoryName();?></span>
+			</a></li>
+		<?php endforeach;?>
+		</ul>
+	</div>
+</div>
+<?php endif;?>

@@ -1,0 +1,622 @@
+<?xml version="1.0"?>
+<config>
+    <sections>
+        <carriers>
+            <groups>
+                <linksynceparcel translate="label">
+                    <label>linksync eParcel 0.9.1</label>
+                    <frontend_type>text</frontend_type>
+                    <sort_order>600</sort_order>
+                    <show_in_default>1</show_in_default>
+                    <show_in_website>1</show_in_website>
+                    <show_in_store>1</show_in_store>
+                    <fields>
+						<requirement_text translate="label">
+						 	<label>Requirement</label>
+							<frontend_type>text</frontend_type>
+							<frontend_model>linksynceparcel/backend_config_requirement</frontend_model>
+							<sort_order>0</sort_order>
+							<show_in_default>1</show_in_default>
+							<show_in_website>1</show_in_website>
+							<show_in_store>1</show_in_store>
+						 </requirement_text>
+                        <active translate="label">
+                            <label>Enabled</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>1</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+							<tooltip>Make this module active?</tooltip>
+                        </active>
+                        <title translate="label">
+                            <label>Title</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>2</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>The text you want displayed to your customers on the checkout page where shipping options are displayed.</tooltip>
+                        </title>
+                        <laid translate="label">
+                            <label>API Key (LAID)</label>
+                            <frontend_type>text</frontend_type>
+							<validate>required-entry</validate>
+                            <sort_order>3</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>The linksync Application ID (LAID) is a unique API Key that's created when you link two apps via the linksync dashboard. You need a valid API Key for this linksync module to work.</tooltip>
+							<comment>Changing the API Key will result in any consignments not dispatched to become invalid</comment>
+                        </laid>
+                        <merchant_location_id translate="label">
+                            <label>eParcel Merchant Location ID</label>
+                            <frontend_type>text</frontend_type>
+							<validate>required-entry</validate>
+                            <sort_order>4</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Issued by Australia Post. A unique three or five alphanumeric character identifier for your geographic merchant location where eParcels are prepared and/or lodged.</tooltip>
+							<comment>Changing the Merchant Location ID will result in any consignments not dispatched to become invalid</comment>
+                        </merchant_location_id>
+                        <post_charge_to_account translate="label">
+                            <label>eParcel Post Charge to Account</label>
+							<validate>required-entry</validate>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>5</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Issued by Australia Post. Merchant account to which Australia Post “post” the charges against for invoicing purposes.</tooltip>
+                        </post_charge_to_account>
+						<merchant_id translate="label">
+                            <label>Merchant Id</label>
+                            <frontend_type>text</frontend_type>
+							<validate>required-entry</validate>
+                            <sort_order>6</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Issued by Australia Post. Merchant ID with Australia Post, for inclusion on the Manifest Summary Report. You can find this ID on Manifest Summary reports produced using the eParcel Portal.</tooltip>
+                        </merchant_id>
+						<lodgement_facility translate="label">
+                            <label>Lodgement facility</label>
+                            <frontend_type>text</frontend_type>
+							<validate>required-entry</validate>
+                            <sort_order>7</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Issued by Australia Post. The Lodgement Facility associated with your Merchant Location ID, for inclusion on the Manifest Summary Report. </tooltip>
+                        </lodgement_facility>
+						<sftp_username translate="label">
+                            <label>SFTP username</label>
+							<validate>required-entry</validate>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>8</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Issued by Australia Post. Your username for uploading manifests to Australia Post SFTP service.</tooltip>
+                        </sftp_username>
+						<sftp_password translate="label">
+                            <label>SFTP password</label>
+							<validate>required-entry</validate>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>9</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Issued by Australia Post. The password associated with your username for uploading manifests to Australia Post SFTP service.</tooltip>
+                        </sftp_password>
+						<operation_mode translate="label">
+                            <label>Operation Mode</label>
+                            <frontend_type>select</frontend_type>
+							<validate>required-entry</validate>
+							<source_model>linksynceparcel/system_config_source_mode</source_model>
+                            <sort_order>10</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Test mode enables you to use and test all features of the linksync eParcel for Magento module without actually submitting a manifest to Australia Post on despatch of a manifest. Live mode will upload your manifest to Australia Post SFTP server on despatch of a manifest.</tooltip>
+                        </operation_mode>
+						<label_logo translate="label">
+                            <label>Label Logo</label>
+                            <comment>Image should be 160px wide by 65px tall PNG format</comment>
+							<frontend_type>image</frontend_type>
+							<backend_model>adminhtml/system_config_backend_image</backend_model>
+							<upload_dir config="system/filesystem/media" scope_info="1">linksync</upload_dir>
+							<base_url type="media" scope_info="1">linksync</base_url>
+                            <sort_order>11</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Use this option if you want to display your own logo on eParcel labels. The logo will not be used if you are printing labels to pre-printed eParcel labels.</tooltip>
+                        </label_logo>
+						<return_address_name translate="label">
+                            <label>Return Address Name</label>
+	                        <frontend_type>text</frontend_type>
+	                        <sort_order>12</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+							<validate>required-entry</validate>
+                            <show_in_store>1</show_in_store>
+							<tooltip>The company name you want to appear on the 'Sender' section of the eParcel labels and 'Customer Address' on Manifest Summary Reports, as well as the 'Delivery Address' on Return Labels.</tooltip>
+                        </return_address_name>
+						<return_address_line1 translate="label">
+                            <label>Return Address Line 1</label>
+                            <frontend_type>text</frontend_type>
+	                        <sort_order>13</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<validate>required-entry</validate>
+							<tooltip>The address you want to appear on the 'Sender' section of the eParcel labels and 'Customer Address' on Manifest Summary Reports, as well as the 'Delivery Address' on Return Labels.</tooltip>
+                        </return_address_line1>
+						<return_address_line2 translate="label">
+                            <label>Return Address Line 2</label>
+	                        <frontend_type>text</frontend_type>
+	                        <sort_order>14</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </return_address_line2>
+						<return_address_line3 translate="label">
+                            <label>Return Address Line 3</label>
+	                        <frontend_type>text</frontend_type>
+	                        <sort_order>15</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </return_address_line3>
+						<return_address_line4 translate="label">
+                            <label>Return Address Line 4</label>
+                            <frontend_type>text</frontend_type>
+	                        <sort_order>16</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </return_address_line4>
+						<return_address_suburb translate="label">
+                            <label>Return Address Suburb</label>
+                            <frontend_type>text</frontend_type>
+	                        <sort_order>17</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<validate>required-entry</validate>
+							<tooltip>The suburb you want to appear on the 'Sender' section of the eParcel labels and 'Customer Address' on Manifest Summary Reports, as well as the 'Delivery Address' on Return Labels.</tooltip>
+                        </return_address_suburb>
+						<return_address_postcode translate="label">
+                            <label>Return Address Postcode</label>
+                            <frontend_type>text</frontend_type>
+	                        <sort_order>18</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<comment>Enter 4 digit post code</comment>
+							<validate>required-entry validate-digits validate-length maximum-length-4 minimum-length-4</validate>
+							<tooltip>The postcode you want to appear on the 'Sender' section of the eParcel labels and 'Customer Address' on Manifest Summary Reports, as well as the 'Delivery Address' on Return Labels.</tooltip>
+                        </return_address_postcode>
+						<return_address_statecode translate="label">
+                            <label>Return Address State code</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>linksynceparcel/system_config_source_state</source_model>
+	                        <sort_order>19</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<validate>required-entry</validate>
+							<tooltip>The State you want to appear on the 'Sender' section of the eParcel labels and 'Customer Address' on Manifest Summary Reports, as well as the 'Delivery Address' on Return Labels.</tooltip>
+                        </return_address_statecode>
+						<condition_name translate="label">
+                            <label>Condition</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>linksynceparcel/system_config_source_condition</source_model>
+                            <sort_order>20</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+							<tooltip>There are no additional options for this setting at this time.</tooltip>
+                        </condition_name>
+                        <export translate="label">
+                            <label>Export</label>
+                            <type>button</type>
+							<frontend_model>linksynceparcel/adminhtml_system_config_export</frontend_model>
+                            <sort_order>21</sort_order>
+                            <show_in_default>0</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </export>
+                        <import translate="label">
+                            <label>Import</label>
+                            <frontend_type>import</frontend_type>
+                            <backend_model>linksynceparcel/system_config_backend_import</backend_model>
+                            <sort_order>22</sort_order>
+                            <show_in_default>0</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </import>
+						<handling_type translate="label">
+                            <label>Calculate Handling Fee</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>linksynceparcel/system_config_source_calculatemethod</source_model>
+                            <sort_order>23</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Add either a fixed or percentage handling fee on top of the standard shipping rates displayed to customers during checkout.</tooltip>
+                        </handling_type>
+						<handling_fee translate="label">
+                            <label>Handling Fee</label>
+                            <frontend_type>text</frontend_type>
+							<validate>validate-number required-entry</validate>
+                            <sort_order>24</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>The fixed or percentage mark-up to be added to the default charge rate for the customers location.</tooltip>
+                        </handling_fee>
+						<insurance translate="label">
+                            <label>Insurance</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>25</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Add insurance to consignment articles by default? This default can be overridden when creating consignments/articles.</tooltip>
+                        </insurance>
+						<default_insurance_value translate="label">
+                            <label>Default Insurance value</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>26</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Default insurance value to add to consignment articles. This default can be overridden when creating consignments/articles.</tooltip>
+                        </default_insurance_value>
+						<signature_required translate="label">
+                            <label>Signature Required</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>27</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Default setting for 'Signature Required' on consignments. This default can be overridden when creating consignments. Note: if set to 'No', customers will be prompted to confirm that they authorise their delivery to be left if no one is available to sign for it, and then be required to enter special instructions. eg 'leave at side door' - these instructions will show on labels associated with the consignment for the order.</tooltip>
+                        </signature_required>
+						<print_return_labels translate="label">
+                            <label>Print Return Labels</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>28</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Default setting for printing return labels for consignments. This default can be overridden when creating consignments.</tooltip>
+                        </print_return_labels>
+						<partial_delivery_allowed translate="label">
+                            <label>Partial Delivery Allowed</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>29</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Default setting for specifying if partial delivery is allowed for consignments. This default can be overridden when creating consignments.</tooltip>
+                        </partial_delivery_allowed>
+						<post_email_notification translate="label">
+                            <label>Australia Post email notification</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>30</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Default setting for using Australia Post's email notification service on consignments. This default can be overridden when creating consignments.</tooltip>
+                        </post_email_notification>
+						<label_format translate="label">
+                            <label>Label Format</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>linksynceparcel/system_config_source_labelformat</source_model>
+                            <sort_order>31</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip><![CDATA[
+								Chose the format used for creating shipping and return labels. Options are:<br/>
+									<ul>
+									<li>SP - single plain - one A6 sized label per 'page'</li>
+									<li>SPP - single pre-printed -one A6 sized label per 'page'</li>
+									<li>MP - multi plain - four A6 sized labels per A4 'page'</li>
+									<li>MPP - multi pre-printed - four A6 sized labels per A4 'page'</li>
+									</ul>
+								]]>
+							</tooltip>
+                        </label_format>
+						
+						<copy_order_notes translate="label">
+                            <label>Copy order notes to label?</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>32</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+							<tooltip>If set to yes, then order notes would be copied to label</tooltip>
+                        </copy_order_notes>
+						
+						<use_order_total_weight translate="label">
+                            <label>Use order total weight</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>33</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>If your products in Magento have weights associated with them, you can use this option to use the total weight of the combined items on an order as the weight for the consignment.</tooltip>
+                        </use_order_total_weight>
+						
+						<product_unit translate="label">
+                            <label>Product Weight Unit</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>linksynceparcel/system_config_source_productunit</source_model>
+                            <sort_order>34</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Select if you have input product weight in KG or grams. Aust Post eParcel requires that all weights are in KG, so if your product weight is entered in Magento in grams, the combined order weight will be converted to KG for consignment and articles weights.</tooltip>
+							<depends>
+								<use_order_total_weight>1</use_order_total_weight>
+							</depends>
+                        </product_unit>
+						
+						<packaging_allowance_type translate="label">
+                            <label>Packaging Allowance Type</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>linksynceparcel/system_config_source_calculatemethod</source_model>
+                            <sort_order>35</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<depends>
+								<use_order_total_weight>1</use_order_total_weight>
+							</depends>
+							<tooltip>Use this option if you want to add additional weight to your order total to allow for packaging. Use 'Fixed' if you want to add a set weight to each order, or use Percentage to add an allowance based on a percentage of the total weight for each order.</tooltip>
+                        </packaging_allowance_type>
+						
+						<packaging_allowance_value translate="label">
+                            <label>Packaging Allowance Value</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>36</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<depends>
+								<use_order_total_weight>1</use_order_total_weight>
+							</depends>
+							<validate>validate-number</validate>
+							<tooltip>Depending on the option you choose for 'Packaging Allowance Type', this value will determine what value to add to the total weight of the combined items on an order. If you select Fixed, then input the additional weight you want to add in KG. eg. .25 for .25 kg/250 grams. If you select percentage, then input the percentage you want to add to an order eg. 5 for 5%. Leave this field empty if you don't want to apply a packaging allowance to orders.</tooltip>
+                        </packaging_allowance_value>
+					
+						<default_article_weight translate="label">
+                            <label>Default Article Weight (Kgs)</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>37</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<depends>
+								<use_order_total_weight>0</use_order_total_weight>
+							</depends>
+							<validate>validate-number</validate>
+							<tooltip>Set a default Article Weight. This value is used as the default value when selecting 'Custom' article type, and can be overridden when creating articles. Leave blank if you don't want to set a default.</tooltip>
+                        </default_article_weight>
+						
+						<use_article_dimensions translate="label">
+                            <label>Use article dimensions</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>38</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>If you're on a dead-weight of cubic-weight contract with Australia Post, then you may not be required to enter dimensions for each article you ship with eParcel. If that's the case, then set this option to No. If you are required to enter dimensions for articles, then set this option to Yes.</tooltip>
+                        </use_article_dimensions>
+						
+						<default_article_height translate="label">
+                            <label>Default Article Height (cm)</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>39</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<depends>
+								<use_article_dimensions>1</use_article_dimensions>
+							</depends>
+							<validate>validate-number</validate>
+							<tooltip>Set a default Article Height. This value is used as the default value when selecting 'Custom' article type, and can be overridden when creating articles. Leave blank if you don't want to set a default.</tooltip>
+                        </default_article_height>
+						<default_article_width translate="label">
+                            <label>Default Article Width (cm)</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>40</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<depends>
+								<use_article_dimensions>1</use_article_dimensions>
+							</depends>
+							<validate>validate-number</validate>
+							<tooltip>Set a default Article Width. This value is used as the default value when selecting 'Custom' article type, and can be overridden when creating articles. Leave blank if you don't want to set a default.</tooltip>
+                        </default_article_width>
+						<default_article_length translate="label">
+                            <label>Default Article Length (cm)</label>
+	                        <frontend_type>text</frontend_type>
+                            <sort_order>41</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<depends>
+								<use_article_dimensions>1</use_article_dimensions>
+							</depends>
+							<validate>validate-number</validate>
+							<tooltip>Set a default Article Length. This value is used as the default value when selecting 'Custom' article type, and can be overridden when creating articles. Leave blank if you don't want to set a default.</tooltip>
+                        </default_article_length>
+						
+						<apply_to_all translate="label">
+                            <label>Apply eParcel shipping to all AU orders</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>42</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Select this option if you want to apply eParcel shipping and management to all of your existing Magento shipping rules and options, including orders via M2E Pro. If you would like to apply different eParcel shipping types to the different shipping methods you offer, we recommend you use our 'Assign Shipping Types' option instead.</tooltip>
+                        </apply_to_all>
+						
+						<default_chargecode translate="label">
+                            <label>Default Charge code for above orders</label>
+	                        <frontend_type>select</frontend_type>
+							<source_model>linksynceparcel/system_config_source_chargecode</source_model>
+                            <sort_order>43</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<validate>required-entry</validate>
+							<depends>
+								<apply_to_all>1</apply_to_all>
+							</depends>
+							<tooltip>Enter the eParcel Charge Code you want to associate with all of your existing Magento shipping rules and options.</tooltip>
+                        </default_chargecode>
+						
+						<display_order_status translate="label">
+                            <label>Display order status on Consignment View</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>47</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Set this option to Yes if you want the Magento order status for all orders to be displayed in the consignment view.</tooltip>
+                        </display_order_status>
+						
+						<display_choosen_status translate="label">
+                            <label>Choose the statuses to show in the consignment view?</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>48</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>By default, orders that have a status of 'Pending', 'Processing' or have an open consignment against them are displayed in the Consignment View. If you'd like to choose different order statuses to display in the Consignment View then set this option to Yes.</tooltip>
+                        </display_choosen_status>
+						
+						<chosen_statuses translate="label">
+                            <label>Select the statuses</label>
+                            <frontend_type>multiselect</frontend_type>
+							<source_model>adminhtml/system_config_source_order_status</source_model>
+                            <sort_order>49</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<validate>required-entry</validate>
+							<tooltip>Select one or more order statuses to display in the Consignment View. Only orders with matching Order Statuses will be displayed in the Consignment View.</tooltip>
+							<depends>
+								<display_choosen_status>1</display_choosen_status>
+							</depends>
+                        </chosen_statuses>
+						
+						<change_order_status translate="label">
+                            <label>Change order status on despatch of Manifest</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>adminhtml/system_config_source_order_status</source_model>
+                            <sort_order>50</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Use this option to change the order status when a manifest is despatched.</tooltip>
+                        </change_order_status>
+						
+						<change_shipping_method translate="label">
+                            <label>Change order shipping option</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>52</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Select this option if you want to change the order's current shipping option to other shipping options.</tooltip>
+                        </change_shipping_method>
+						
+						<notify_customers translate="label">
+                            <label>Notify Customers on despatch of Manifest</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>55</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Use this option to notify customers of tracking numbers when a manifest is despatched. This default can be overridden when creating consignments.</tooltip>
+                        </notify_customers>					
+
+						
+						<from_email_address translate="label">
+                            <label>From email address</label>
+							<validate>validate-email</validate>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>61</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>The 'from' email address to be used when notifying customers of tracking information when a manifest is despatched.</tooltip>
+                        </from_email_address>
+						<subject translate="label">
+                            <label>Subject</label>
+                            <frontend_type>text</frontend_type>
+							<comment>You can use the [TrackingNumber],[OrderNumber], [CustomerFirstname] dynamic variables</comment>
+                            <sort_order>62</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </subject>
+						<email_body translate="label">
+                            <label>Email Body</label>
+                            <frontend_type>editor</frontend_type>
+   							<frontend_model>linksynceparcel/adminhtml_system_config_editor</frontend_model>
+							<comment>You can use the [TrackingNumber],[OrderNumber], [CustomerFirstname] dynamic variables</comment>
+                            <sort_order>63</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </email_body>
+						<sendlog translate="label">
+							<label>Send Log</label>
+                            <frontend_type>text</frontend_type>
+   							<frontend_model>linksynceparcel/adminhtml_system_config_sendlog</frontend_model>
+							<comment>To be used if instructed by linksync support</comment>
+                            <sort_order>100</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </sendlog>
+						<mark_despatch translate="label">
+                            <label>Enable Mark as Despatched Action on Consignment UI</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>105</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+							<tooltip>To be used if instructed by linksync support</tooltip>
+                        </mark_despatch>
+						
+                	</fields>
+                </linksynceparcel>
+            </groups>
+        </carriers>
+    </sections>
+</config>

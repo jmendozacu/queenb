@@ -1,0 +1,14 @@
+<config>
+   <modules>
+      <Extendware_EWPromoConditions>
+         <active>true</active>
+         <codePool>local</codePool>
+         <depends>
+            <Extendware_EWCore/>
+         </depends>
+         <extendware>
+            <name>Promotional Conditions</name>
+         </extendware>
+      </Extendware_EWPromoConditions>
+   </modules>
+</config>

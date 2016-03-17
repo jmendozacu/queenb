@@ -1,0 +1,17 @@
+<?php
+class Queenb_Productshowrule_Block_Productshowrule extends Mage_Core_Block_Template
+{
+	public function _prepareLayout()
+    {
+		return parent::_prepareLayout();
+    }
+    
+     public function getProductshowrule()     
+     { 
+        if (!$this->hasData('productshowrule')) {
+            $this->setData('productshowrule', Mage::registry('productshowrule'));
+        }
+        return $this->getData('productshowrule');
+        
+    }
+}

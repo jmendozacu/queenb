@@ -1,0 +1,1 @@
+[15-May-2015 00:33:35 UTC] PHP Warning:  mysql_real_escape_string() expects parameter 1 to be string, object given in /home/queenb/public_html/magento/wp/wp-includes/wp-db.php on line 1094

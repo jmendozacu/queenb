@@ -1,0 +1,117 @@
+<?php
+/**
+ * Magento
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License (AFL 3.0)
+ * that is bundled with this package in the file LICENSE_AFL.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/afl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@magentocommerce.com so we can send you a copy immediately.
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade Magento to newer
+ * versions in the future. If you wish to customize Magento for your
+ * needs please refer to http://www.magentocommerce.com for more information.
+ *
+ * @category    design
+ * @package     rwd_default
+ * @copyright   Copyright (c) 2014 Magento Inc. (http://www.magentocommerce.com)
+ * @license     http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ */
+?>
+
+<script type="text/javascript" src="<?php echo $this->helper("contactusmap")->getmapapi();?>"></script>
+<?php
+
+$helper = $this->helper("contactusmap"); //call helper
+
+$mapheight  = $helper->getmapheight();  //map height
+
+$mapaddressreal = $helper->getAddress();  //map addresss
+
+$mapaddress = "";
+    
+if($mapaddressreal)
+{
+    $mapaddress .= $mapaddressreal;
+}
+else {
+    $mapaddress .="D-903 Ganesh Meridian, Near Sola Bridge, Opposite Gujarat Highcourt, Sarkhej Gandhinagar Highway, Ahmedabad, Gujarat 380061, India.";
+}
+
+$mapmarker = $helper->getmapimage(); //get marker image
+
+$imagepath = "";
+
+if($mapmarker)
+{
+ $imagepath .= Mage::getbaseUrl("media")."map/images/".$mapmarker;
+}else{
+ $imagepath .=  Mage::getbaseUrl("media")."map/marker.jpg";  
+}
+
+$address = "$mapaddress"; // Google HQ
+
+$prepAddr = str_replace(' ','+',$address);
+
+
+
+$geocode=file_get_contents('http://maps.google.com/maps/api/geocode/json?address='.$prepAddr.'&sensor=false');
+
+$output= json_decode($geocode);
+
+$lat = $output->results[0]->geometry->location->lat; //got latitude as per address
+
+$long = $output->results[0]->geometry->location->lng;
+
+
+
+?>
+<script type="text/javascript">
+ jQuery(document).ready(function () {
+     initialize();
+ });
+  function initialize() {
+    var position = new google.maps.LatLng(<?php echo $lat;?>,<?php echo $long;?>);
+    var myOptions = {
+      zoom: 10,
+      center: position,
+      mapTypeId: google.maps.MapTypeId.ROADMAP
+    };
+    var map = new google.maps.Map(
+        document.getElementById("map_canvas"),
+        myOptions);
+        
+    var image = '<?php echo $imagepath;?>'; //get marker image
+    
+    
+    var marker = new google.maps.Marker({
+        position: position,
+        map: map,
+        title:"<?php echo $mapaddress; ?>",
+        icon: image
+    });  
+ 
+    var contentString = '<?php echo $address;?>';
+    var infowindow = new google.maps.InfoWindow({
+        content: contentString
+    });
+   var infowindow = new google.maps.InfoWindow({
+                                                  content: contentString,
+                                                  width:1000,
+                                                  height:1000
+                                               });
+  google.maps.event.addListener(marker, 'click', function() {
+      infowindow.open(map,marker);
+  });
+ infowindow.open(map,marker);
+  }
+ 
+</script>
+<div id="map_canvas" style="width:100%;height:<?php echo $mapheight;?>px;"></div>
+<br/>

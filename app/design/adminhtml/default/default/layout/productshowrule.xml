@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<layout version="0.1.0">
+    <productshowrule_adminhtml_productshowrule_index>
+        <reference name="content">
+			<block type="productshowrule/adminhtml_productshowrule" template="productshowrule/productshowrule.phtml" name="productshowrule" />
+        </reference>
+    </productshowrule_adminhtml_productshowrule_index>
+</layout>

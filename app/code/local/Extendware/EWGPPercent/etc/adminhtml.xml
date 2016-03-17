@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<config>
+	<extendware>
+		<quickaccess>
+			<ewgppercent>
+                <resource>extendware/ewgppercent</resource>
+				<children>
+					<catalog_product translate="title" module="ewgppercent">
+						<title>Manage Products</title>
+						<action>adminhtml/catalog_product/</action>
+						<resource>catalog/products</resource>
+						<sort_order>1</sort_order>
+					</catalog_product>
+				</children>
+				<title/>
+			</ewgppercent>
+		</quickaccess>
+	</extendware>
+	<acl>
+		<resources>
+            <admin>
+                <children>
+                    <extendware translate="title" module="ewgppercent">
+                    	<title>Extendware</title>
+                    	<sort_order>0</sort_order>
+                        <children>
+                        	<ewgppercent translate="title" module="ewgppercent">
+                        		<title>Tier / Group Price Percents</title>
+                        		<children>
+                        			<settings translate="title">
+                        				<title>Settings</title>
+                        				<children>
+				                            <main translate="title">
+				                                <title>Main</title>
+				                                <children>
+					                                <ewgppercent translate="title">
+						                                <title>General</title>
+						                            </ewgppercent>
+					                            </children>
+				                            </main>
+			                            </children>
+			            			</settings>
+			            		</children>
+			            	</ewgppercent>
+                        </children>
+                    </extendware>
+                </children>
+            </admin>
+        </resources>
+	</acl>
+</config>

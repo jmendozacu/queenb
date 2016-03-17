@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<layout version="0.1.0">
+    <customercusexport_adminhtml_customercusexport_index>
+        <reference name="content">
+			<block type="customercusexport/adminhtml_customercusexport" template="customercusexport/customercusexport.phtml" name="supplierreportcus" />
+        </reference>
+    </customercusexport_adminhtml_customercusexport_index>
+</layout>
