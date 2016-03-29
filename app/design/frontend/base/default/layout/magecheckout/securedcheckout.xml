@@ -319,6 +319,8 @@
                     <block_id helper="securedcheckout/config/getBlockBelowShippingMethod"/>
                 </action>
             </block>
+            <block type="ordercomment/checkout_onepage_review_commentfield" name="cdr_order_comment"
+                   template="cdr/ordercomment/onepage/review/commentfield.phtml"/>
         </reference>
         <reference name="one.step.checkout.container.form.payment.method.extra">
             <block type="cms/block" name="securedcheckout.payment.method.below">
