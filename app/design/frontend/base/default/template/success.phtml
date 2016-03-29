@@ -64,7 +64,7 @@
 	$allow_guesttoreg_at_checkout_button = (bool)Mage::getStoreConfig('guesttoreg/guesttoreg/disable_button_ext');
 	if ($allow_guesttoreg_at_checkout_button == true) {
 ?>
-<button type="button" class="button" title="<?php echo $this->__('Convert Guest Order to Account') ?>" onclick="document.edit_form.submit()"><span><span><?php echo $this->__('Convert Guest Order to Account') ?></span></span></button>
+<button type="button" class="button"  style="display: none;" title="<?php echo $this->__('Convert Guest Order to Account') ?>" onclick="document.edit_form.submit()"><span><span><?php echo $this->__('Convert Guest Order to Account') ?></span></span></button>
 <form id="edit_form" name="edit_form" method="post" action="<?php echo $this->getUrl(); ?>GuestToReg/index/post">
 		<input type='hidden' name='customer_order_id' value='<?php echo $this->escapeHtml($this->getOrderId()); ?>'>
 </form>
