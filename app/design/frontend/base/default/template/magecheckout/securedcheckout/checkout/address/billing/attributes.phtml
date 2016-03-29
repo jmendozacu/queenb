@@ -336,6 +336,7 @@
         default:
             ?>
             <?php endswitch; ?>
+
     <?php if ($i % 2 == 0 || $attribute->getColspan() == 2): ?>
         <div class="mc-clear"></div>
     <?php endif; ?>
@@ -345,6 +346,62 @@
     } else $i++;
     ?>
 <?php endforeach; ?>
+    <?php if(!$this->isCustomerLoggedIn()){ ?>
+        <div
+            class="one-step-checkout-form-field col-mg <?php echo $field_colspan ?>">
+            <?php  $attribute = Mage::getModel('eav/config')->getAttribute('customer','how_find_us_type'); ?>
+            <label for="how_to_know" class=""><?php echo $this->__('How did you hear about us?') ?></label>
+            <div class="input-box">
+                <select name="billing[how_find_us_type]" id="billing:how_find_us_type" class=" how_to_know <?php if($attribute->getIsRequired() == true){?>required-entry<?php } ?>">
+                    <option value="0" selected >Select Option</option>
+                    <?php
+                    $options = $attribute->getSource()->getAllOptions();
+                    foreach($options as $option){
+                        ?>
+                        <option value="<?php echo $option['value']?>" >
+                            <?php echo $this->__($option['label']); ?></option>
+                    <?php } ?>
+                </select>
+                <input type="text" style=" color: #000;display:none;" name="billing[how_find_us_value]" placeholder="" id="billing:how_find_us_value" value="<?php echo $this->getBillingDataFromSession('Know_from'); ?>" title="<?php echo Mage::helper('core')->quoteEscape($this->__('know from')) ?>" class="input-text know_from" />
+            </div>
+        </div>
+        <script>
+            jQuery(document).ready(function($){
+                $(".how_to_know").change(function(){
+                    var val = $(this).val();
+                    if(val != 0){
+                        if(val == 1){
+                            $(".know_from").show();
+                            $(".know_from").attr("placeholder", "Friend's name so that we can thank them").placeholder();
+                        }
+                        if(val == 2){
+                            $(".know_from").show();
+                            $(".know_from").attr("placeholder", "Name of media?").placeholder();
+                        }
+                        if(val == 3){
+                            $(".know_from").show();
+                            $(".know_from").attr("placeholder", "Search term?").placeholder();
+                        }
+                        if(val == 4){
+                            $(".know_from").show();
+                            $(".know_from").attr("placeholder", "Name of store?").placeholder();
+                        }
+                        if(val == 5){
+                            $(".know_from").show();
+                            $(".know_from").attr("placeholder", " Where?").placeholder();
+                        }
+                        if(val == 6){
+                            $(".know_from").show();
+                            $(".know_from").attr("placeholder", " Where?").placeholder();
+                        }
+                    }
+                    else{
+                        $(".know_from").hide();
+                    }
+                })
+            })
+        </script>
+    <?php } ?>
 <script type="text/javascript">
     //<![CDATA[
     if ($('billing:region_id'))
