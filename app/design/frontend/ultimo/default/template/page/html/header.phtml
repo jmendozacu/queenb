@@ -219,7 +219,8 @@
 
                     <?php if ($centralColUnits): ?>
                     <div class="search-wrapper-centered clearer v-grid <?php echo $centralColGridClass; ?> <?php echo $searchClasses; ?>">
-                        <h4><?php echo $this->__('FREE Australian shipping on orders over $100*');?></h4>
+                        <h4><a href="<?php echo $this->getUrl('shipping-policy') ?>"><?php echo $this->__('FREE Australian shipping on orders over $100*');?></a></h4>
+                        <h4><a href="<?php echo $this->getUrl('international-shipping') ?>"><?php echo $this->__('International shipping from $15#');?></a></h4>
                         <?php echo $p['centralCol'][0]; ?>
                     </div>
                     <?php endif; ?>
