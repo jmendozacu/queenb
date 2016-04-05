@@ -220,7 +220,7 @@
                     <?php if ($centralColUnits): ?>
                     <div class="search-wrapper-centered clearer v-grid <?php echo $centralColGridClass; ?> <?php echo $searchClasses; ?>">
                         <h4><a href="<?php echo $this->getUrl('shipping-policy') ?>"><?php echo $this->__('FREE Australian shipping on orders over $100*');?></a></h4>
-                        <h4><a href="<?php echo $this->getUrl('international-shipping') ?>"><?php echo $this->__('International shipping from $15#');?></a></h4>
+                        <h4 style="margin-top: -11px;"><a href="<?php echo $this->getUrl('international-shipping') ?>"><?php echo $this->__('International shipping from $15');?><span style="font-size: 10px;margin-top:0px;display: table-caption;">#</span></a></h4>
                         <?php echo $p['centralCol'][0]; ?>
                     </div>
                     <?php endif; ?>
