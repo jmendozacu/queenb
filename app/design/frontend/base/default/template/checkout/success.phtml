@@ -29,7 +29,26 @@
 </div>
 <?php echo $this->getMessagesBlock()->getGroupedHtml() ?>
 <h2 class="sub-title"><?php echo $this->__('Thank you for your purchase!') ?></h2>
-
+<!-- Google Code for Sale Conversion Page -->
+<script type="text/javascript">
+    /* <![CDATA[ */
+    var google_conversion_id = 1059039486;
+    var google_conversion_language = "en";
+    var google_conversion_format = "2";
+    var google_conversion_color = "ffffff";
+    var google_conversion_label = "7jmtCLq74gYQ_tH--AM";
+    var google_conversion_value = 1.00;
+    var google_conversion_currency = "AUD";
+    var google_remarketing_only = false;
+    /* ]]> */
+</script>
+<script type="text/javascript" src="//www.googleadservices.com/pagead/conversion.js">
+</script>
+<noscript>
+    <div style="display:inline;">
+        <img height="1" width="1" style="border-style:none;" alt="" src="//www.googleadservices.com/pagead/conversion/1059039486/?value=1.00&amp;currency_code=AUD&amp;label=7jmtCLq74gYQ_tH--AM&amp;guid=ON&amp;script=0"/>
+    </div>
+</noscript>
 <?php if ($this->getOrderId()):?>
 <?php if ($this->getCanViewOrder()) :?>
     <p><?php echo $this->__('Your order # is: %s.', sprintf('<a href="%s">%s</a>', $this->escapeHtml($this->getViewOrderUrl()), $this->escapeHtml($this->getOrderId()))) ?></p>
