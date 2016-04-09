@@ -7,10 +7,17 @@
 <div class="page-title">
     <h1><?php echo Mage::helper('contacts')->__('Contact Us') ?></h1>
 </div>
-
+<div style="margin-bottom: 10px">
+    <?php echo Mage::getStoreConfig('contactusmap/contactusmap/contactustoptext') ?>
+</div>
+<div style="margin-bottom: 10px">
+    <strong><?php echo $this->__('Visiting Hours of the Hive') ?></strong></div>
+<div style="margin-bottom: 10px">
+    <?php echo Mage::getStoreConfig('contactusmap/contactusmap/contactusopeninghour') ?>
+</div>
 <form action="/contacts/index/post" id="contactForm" method="post" class="scaffold-form">
 
-    <div class="fieldset">
+    <div class="fieldset" style="padding: 0px 0px 15px">
 
         <h2 class="legend"><?php echo Mage::helper('contacts')->__('Contact Information') ?></h2>
 
@@ -91,7 +98,7 @@
 
     </div>
 
-    <div class="buttons-set">
+    <div class="buttons-set" style="margin-left: 0px;">
 
         <input type="text" name="hideit" id="hideit" value="" style="display:none !important;" />
 
