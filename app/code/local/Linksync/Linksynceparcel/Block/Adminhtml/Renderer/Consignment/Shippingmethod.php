@@ -8,12 +8,20 @@ class Linksync_Linksynceparcel_Block_Adminhtml_Renderer_Consignment_Shippingmeth
 		$values = explode('_',$value);
 		$orderId = $values[0];
 		$order = Mage::getModel('sales/order')->load($orderId);
+		$address = $order->getShippingAddress();
+		$country = $address->getCountry();
 		$chargeCode = $row->getData('general_linksynceparcel_shipping_chargecode');
+		$method =  $row->getData('shipping_description');
 		if(!$chargeCode) {
 			$chargeCode = Mage::helper('linksynceparcel')->getChargeCode($order);
 		}
-		$method =  $row->getData('shipping_description');
-		$display = $method.' - '.$chargeCode;
+		
+		$chargeCode = ' - '. $chargeCode;
+		$shipping_method = Mage::helper('linksynceparcel')->getNonlinksyncShippingTypeChargecode($method);
+		if($country != "AU" && !$shipping_method) {
+			$chargeCode = '';
+		}
+		$display = $method . $chargeCode;
 		return $display;
 	}
 }

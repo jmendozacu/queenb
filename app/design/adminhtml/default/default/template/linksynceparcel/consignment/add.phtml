@@ -250,6 +250,7 @@ $presets = Mage::getModel('linksynceparcel/preset')
 <?php if($use_order_total_weight == 1): ?>
 var weightPerArticle = '<?php echo $weightPerArticle?>';
 <?php endif; ?>
+$jEparcel = jQuery.noConflict();
 $jEparcel(document).ready(function(){
 	$jEparcel('.edit-consignments-defaults').click(function(){
 		$jEparcel('.consignment-fields').slideToggle();

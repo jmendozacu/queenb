@@ -240,9 +240,9 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		return array('content' => $content, 'charge_code' => $chargeCode);
 	}
 		
-	public function prepareReturnAddress()
+	public function prepareReturnAddress($storeId)
 	{
-		$returnAddressLine2 = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line2'));
+		$returnAddressLine2 = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line2', $storeId));
 		if(!empty($returnAddressLine2))
 		{
 			$returnAddressLine2 = '<returnAddressLine2>'.trim($this->xmlData($returnAddressLine2)).'</returnAddressLine2>';
@@ -252,7 +252,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			$returnAddressLine2 = '<returnAddressLine2 />';
 		}
 		
-		$returnAddressLine3 = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line3'));
+		$returnAddressLine3 = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line3', $storeId));
 		if(!empty($returnAddressLine3))
 		{
 			$returnAddressLine3 = '<returnAddressLine3>'.trim($this->xmlData($returnAddressLine3)).'</returnAddressLine3>';
@@ -262,7 +262,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			$returnAddressLine3 = '<returnAddressLine3 />';
 		}
 		
-		$returnAddressLine4 = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line4'));
+		$returnAddressLine4 = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line4', $storeId));
 		if(!empty($returnAddressLine4))
 		{
 			$returnAddressLine4 = '<returnAddressLine4>'.trim($this->xmlData($returnAddressLine4)).'</returnAddressLine4>';
@@ -284,11 +284,11 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		);
 
 		$replace = array(
-			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line1'))),
-			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_name'))),
-			trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_postcode')),
-			trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_statecode')),
-			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_suburb'))),
+			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line1', $storeId))),
+			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_name', $storeId))),
+			trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_postcode', $storeId)),
+			trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_statecode', $storeId)),
+			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_suburb', $storeId))),
 			trim($returnAddressLine2),
 			trim($returnAddressLine3),
 			trim($returnAddressLine4)
@@ -302,11 +302,12 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 	{
 		$deliveryAddress  = $order->getShippingAddress()->getData();
 		$chargeCode = $this->getChargeCode($order,$consignment_number);
+		$storeId = $order->getStoreId();
 		$shipAddress = $order->getShippingAddress();
 		$country = $shipAddress->getCountry();
 		$total_weight = 0;
 		if($country != 'AU') {
-			$returnInternationalAddress = $this->prepareInternationalReturnAddress();
+			$returnInternationalAddress = $this->prepareInternationalReturnAddress($storeId);
 			$deliveryInternationalInfo = $this->prepareInternationalDeliveryAddress($deliveryAddress,$order,$data,$country);
 			$articlesInternationalInfo = $this->prepareInternationalArticles($data, $order);
 			$total_weight = $articlesInternationalInfo['total_weight'];
@@ -328,7 +329,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			);
 			$template = file_get_contents($this->getTemplatePath().DS.'international-articles-template.xml');
 		} else {
-			$returnAddress = $this->prepareReturnAddress();
+			$returnAddress = $this->prepareReturnAddress($storeId);
 			$deliveryInfo = $this->prepareDeliveryAddress($deliveryAddress,$order,$data);
 			$articlesInfo = $this->prepareArticles($data, $order);
 			$total_weight = $articlesInfo['total_weight'];
@@ -381,11 +382,12 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		$deliveryAddress  = $order->getShippingAddress()->getData();
 		
 		$chargeCode = $this->getChargeCode($order,$consignment_number);
+		$storeId = $order->getStoreId();
 		$shipAddress = $order->getShippingAddress();
 		$country = $shipAddress->getCountry();
 		$total_weight = 0;
 		if($country != 'AU') {
-			$returnInternationalAddress = $this->prepareInternationalReturnAddress();
+			$returnInternationalAddress = $this->prepareInternationalReturnAddress($storeId);
 			$deliveryInternationalInfo = $this->prepareInternationalDeliveryAddress($deliveryAddress,$order,$data,$country);
 			$articlesInternationalInfo = $this->prepareInternationalOrderWeightArticles($data, $order);
 			$total_weight = $articlesInternationalInfo['total_weight'];
@@ -407,7 +409,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			);
 			$template = file_get_contents($this->getTemplatePath().DS.'international-articles-template.xml');
 		} else {
-			$returnAddress = $this->prepareReturnAddress();
+			$returnAddress = $this->prepareReturnAddress($storeId);
 			$deliveryInfo = $this->prepareDeliveryAddress($deliveryAddress,$order,$data);
 			$articlesInfo = $this->prepareOrderWeightArticles($data, $order);
 			$total_weight = $articlesInfo['total_weight'];
@@ -456,11 +458,12 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		$deliveryAddress  = $order->getShippingAddress()->getData();
 		
 		$chargeCode = $this->getChargeCode($order);
+		$storeId = $order->getStoreId();
 		$shipAddress = $order->getShippingAddress();
 		$country = $shipAddress->getCountry();
 		$total_weight = 0;
 		if($country != 'AU') {
-			$returnInternationalAddress = $this->prepareInternationalReturnAddress();
+			$returnInternationalAddress = $this->prepareInternationalReturnAddress($storeId);
 			$deliveryInternationalInfo = $this->prepareInternationalDeliveryAddress($deliveryAddress,$order,$data,$country);
 			$articlesInternationalInfo = $this->prepareInternationalArticles($data, $order, true);
 			$total_weight = $articlesInternationalInfo['total_weight'];
@@ -482,7 +485,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			);
 			$template = file_get_contents($this->getTemplatePath().DS.'international-articles-template.xml');
 		} else {
-			$returnAddress = $this->prepareReturnAddress();
+			$returnAddress = $this->prepareReturnAddress($storeId);
 			$deliveryInfo = $this->prepareDeliveryAddress($deliveryAddress,$order,$data);
 			$articlesInfo = $this->prepareArticlesBulk($data, $order);
 			$total_weight = $articlesInfo['total_weight'];
@@ -529,7 +532,8 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 	public function prepareModifiedArticleData($order,$consignment_number='')
 	{
 		$deliveryAddress  = $order->getShippingAddress()->getData();
-		$returnAddress = $this->prepareReturnAddress();
+		$storeId = $order->getStoreId();
+		$returnAddress = $this->prepareReturnAddress($storeId);
 		$deliveryInfo = $this->prepareDeliveryAddress($deliveryAddress,$order);
 		$articlesInfo = $this->prepareModifiedArticles($order,$consignment_number);
 		
@@ -579,7 +583,8 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 	public function prepareUpdateArticleData($data, $order,$consignment_number='')
 	{
 		$deliveryAddress  = $order->getShippingAddress()->getData();
-		$returnAddress = $this->prepareReturnAddress();
+		$storeId = $order->getStoreId();
+		$returnAddress = $this->prepareReturnAddress($storeId);
 		$deliveryInfo = $this->prepareDeliveryAddress($deliveryAddress,$order,$data);
 		$articlesInfo = $this->prepareUpdatedArticles($order,$data);
 		
@@ -626,7 +631,8 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 	public function prepareAddArticleData($data, $order,$consignment_number='')
 	{
 		$deliveryAddress  = $order->getShippingAddress()->getData();
-		$returnAddress = $this->prepareReturnAddress();
+		$storeId = $order->getStoreId();
+		$returnAddress = $this->prepareReturnAddress($storeId);
 		$deliveryInfo = $this->prepareDeliveryAddress($deliveryAddress,$order,$data);
 		$articlesInfo = $this->prepareAddArticles($order,$data);
 		
@@ -736,6 +742,17 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		$firstname = $address['firstname'].' '.$address['lastname'];
 		$email = $address['email'];
 		$phone = $address['telephone'];
+		$phonestr = $phone;
+		$phone = $this->getValidPhoneNumber($phone);
+		if(!empty($phone)) {
+			$withplus = '';
+			$strposphone = strpos($phone, '+');
+			if($strposphone !== false) {
+				$withplus = '+';
+			}
+			$phone = preg_replace('/[^0-9]/s', '', $phone);
+			$phonestr = $withplus . $phone;
+		}
 		
 		$instructions = $data['delivery_instruction'];
 		
@@ -763,7 +780,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			trim($email),
 			($instructions ? '<deliveryInstructions>'.$this->xmlData(($instructions)).'</deliveryInstructions>' : '<deliveryInstructions />'),
 			trim($this->xmlData($firstname)),
-			trim($phone),
+			trim($phonestr),
 			trim($postalCode),
 			trim($state),
 			trim($this->xmlData($city))
@@ -4144,90 +4161,90 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			),
 			'ECD1'	=> array(
 				'key'			=> 'int_express_courier',
-				'name'			=> 'Int. Express Courier',
+				'name'			=> 'Int. Express Courier Document',
 				'serviceCode' 	=> 0,
 				'prodCode' 		=> 0,
-				'labelType' 	=> 'Int. Express Courier',
+				'labelType' 	=> 'Int. Express Courier Document',
 				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
 				'serviceType'	=> 'international',
 				'service'		=> 'Int.'
 			),
 			'ECD2'	=> array(
 				'key'			=> 'int_express_courier',
-				'name'			=> 'Int. Express Courier',
+				'name'			=> 'Int. Express Courier Document',
 				'serviceCode' 	=> 0,
 				'prodCode' 		=> 0,
-				'labelType' 	=> 'Int. Express Courier',
+				'labelType' 	=> 'Int. Express Courier Document',
 				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
 				'serviceType'	=> 'international',
 				'service'		=> 'Int.'
 			),
 			'ECD3'	=> array(
 				'key'			=> 'int_express_courier',
-				'name'			=> 'Int. Express Courier',
+				'name'			=> 'Int. Express Courier Document',
 				'serviceCode' 	=> 0,
 				'prodCode' 		=> 0,
-				'labelType' 	=> 'Int. Express Courier',
+				'labelType' 	=> 'Int. Express Courier Document',
 				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
 				'serviceType'	=> 'international',
 				'service'		=> 'Int.'
 			),
 			'ECD4'	=> array(
 				'key'			=> 'int_express_courier',
-				'name'			=> 'Int. Express Courier',
+				'name'			=> 'Int. Express Courier Document',
 				'serviceCode' 	=> 0,
 				'prodCode' 		=> 0,
-				'labelType' 	=> 'Int. Express Courier',
+				'labelType' 	=> 'Int. Express Courier Document',
 				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
 				'serviceType'	=> 'international',
 				'service'		=> 'Int.'
 			),
 			'ECD5'	=> array(
 				'key'			=> 'int_express_courier',
-				'name'			=> 'Int. Express Courier',
+				'name'			=> 'Int. Express Courier Document',
 				'serviceCode' 	=> 0,
 				'prodCode' 		=> 0,
-				'labelType' 	=> 'Int. Express Courier',
+				'labelType' 	=> 'Int. Express Courier Document',
 				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
 				'serviceType'	=> 'international',
 				'service'		=> 'Int.'
 			),
 			'ECD6'	=> array(
 				'key'			=> 'int_express_courier',
-				'name'			=> 'Int. Express Courier',
+				'name'			=> 'Int. Express Courier Document',
 				'serviceCode' 	=> 0,
 				'prodCode' 		=> 0,
-				'labelType' 	=> 'Int. Express Courier',
+				'labelType' 	=> 'Int. Express Courier Document',
 				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
 				'serviceType'	=> 'international',
 				'service'		=> 'Int.'
 			),
 			'ECD7'	=> array(
 				'key'			=> 'int_express_courier',
-				'name'			=> 'Int. Express Courier',
+				'name'			=> 'Int. Express Courier Document',
 				'serviceCode' 	=> 0,
 				'prodCode' 		=> 0,
-				'labelType' 	=> 'Int. Express Courier',
+				'labelType' 	=> 'Int. Express Courier Document',
 				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
 				'serviceType'	=> 'international',
 				'service'		=> 'Int.'
 			),
 			'ECD8'	=> array(
 				'key'			=> 'int_express_courier',
-				'name'			=> 'Int. Express Courier',
+				'name'			=> 'Int. Express Courier Document',
 				'serviceCode' 	=> 0,
 				'prodCode' 		=> 0,
-				'labelType' 	=> 'Int. Express Courier',
+				'labelType' 	=> 'Int. Express Courier Document',
 				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
 				'serviceType'	=> 'international',
 				'service'		=> 'Int.'
 			),
 			'ECD9'	=> array(
 				'key'			=> 'int_express_courier',
-				'name'			=> 'Int. Express Courier',
+				'name'			=> 'Int. Express Courier Document',
 				'serviceCode' 	=> 0,
 				'prodCode' 		=> 0,
-				'labelType' 	=> 'Int. Express Courier',
+				'labelType' 	=> 'Int. Express Courier Document',
 				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
 				'serviceType'	=> 'international',
 				'service'		=> 'Int.'
@@ -4700,8 +4717,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		$timestamp = time();
 		$date = date('Y-m-d H:i:s', $timestamp);
 		
-		$product_classification = !empty($data['product_classification'])?$data['product_classification']:Mage::getStoreConfig('carriers/linksynceparcel/default_product_classification');
-		$declared_value = !empty($data['declared_value'])?1:0;
+		$product_classification = !empty($data['product_classification'])?$data['product_classification']:991;
 		$has_commercial_value = !empty($data['has_commercial_value'])?1:0;
 		$country_origin = $data['country_origin'];
 		if(!isset($country_origin)) {
@@ -4714,7 +4730,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		
 		$insuranceValue = (!empty($data['order_value_insurance']))?$this->getOrderProdItems($data, $order_id, true):$data['insurance_value'];
 		
-		$query = "INSERT {$table} SET order_id = '{$order_id}', consignment_number='{$consignmentNumber}', add_date='".$date."', insurance = '". $data['insurance'] ."', insurance_value = '". $insuranceValue ."', export_declaration_number='".$data['export_declaration_number']."', declared_value='". $declared_value ."', declared_value_text = '".$data['declared_value_text']."', has_commercial_value='". $has_commercial_value ."', product_classification = ". $product_classification .", product_classification_text = '".$data['product_classification_text']."', country_origin = '".$country_origin."', hs_tariff = '". $hs_tariff ."', default_contents = '". $data['contents'] ."', ship_country = '". $country ."'";
+		$query = "INSERT {$table} SET order_id = '{$order_id}', consignment_number='{$consignmentNumber}', add_date='".$date."', insurance = '". $data['insurance'] ."', insurance_value = '". $insuranceValue ."', export_declaration_number='".$data['export_declaration_number']."', has_commercial_value='". $has_commercial_value ."', product_classification = ". $product_classification .", product_classification_text = '".$data['product_classification_text']."', country_origin = '".$country_origin."', hs_tariff = '". $hs_tariff ."', default_contents = '". $data['contents'] ."', ship_country = '". $country ."'";
 		
 		$writeConnection->query($query);
 	}
@@ -5135,15 +5151,20 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 	public function resubmitConsignment($order_id, $consignment_number)
 	{
 		$order = Mage::getModel('sales/order')->load($order_id);
-		$articleData = Mage::helper('linksynceparcel')->prepareModifiedArticle($order, $consignment_number);
-		$content = $articleData['content'];
-		try
-		{
-			return Mage::getModel('linksynceparcel/api')->modifyConsignment($content,$consignment_number);
-		}
-		catch(Exception $e)
-		{
-			throw $e;
+		$address = $order->getShippingAddress();
+		$country = $address->getCountry();
+		if($country == 'AU') {
+			$articleData = Mage::helper('linksynceparcel')->prepareModifiedArticle($order, $consignment_number);
+			$content = $articleData['content'];
+			$charge_code = $articleData['charge_code'];
+			try
+			{
+				return Mage::getModel('linksynceparcel/api')->modifyConsignment($content,$consignment_number,$charge_code);
+			}
+			catch(Exception $e)
+			{
+				throw $e;
+			}
 		}
 	}
 	
@@ -5833,6 +5854,46 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		return $readConnection->fetchOne($query);
 	}
 	
+	public function getChargecodeMethodType($method)
+	{
+		$chargecode = $this->getNonlinksyncShippingTypeChargecode($method);
+		$chargeCodes = Mage::helper('linksynceparcel')->getChargeCodes();
+		$chargeCodeData = $chargeCodes[$chargecode];
+		$type = '';
+		switch($chargeCodeData['serviceType']) {
+			case 'express':
+				$type = 'domestic';
+				break;
+			case 'standard':
+				$type = 'domestic';
+				break;
+			case 'international':
+				$type = 'international';
+				break;
+		}
+		return $type;
+	}
+	
+	public function getChargecodeType($orderid)
+	{
+		$chargecode = $this->getOrderChargeCode($orderid);
+		$chargeCodes = Mage::helper('linksynceparcel')->getChargeCodes();
+		$chargeCodeData = $chargeCodes[$chargecode];
+		$type = '';
+		switch($chargeCodeData['serviceType']) {
+			case 'express':
+				$type = 'domestic';
+				break;
+			case 'standard':
+				$type = 'domestic';
+				break;
+			case 'international':
+				$type = 'international';
+				break;
+		}
+		return $type;
+	}
+	
 	public function getOrderShippingTypes()
 	{
 		$collection = Mage::getModel('sales/order')->getCollection();
@@ -5846,26 +5907,31 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		foreach($collection as $order)
 		{
 			$method = $order->getShippingMethod();
-			$description = $order->getShippingDescription();			
-			$options[base64_encode($method.'###'.$description)] = $order->getShippingDescription();
+			$description = $order->getShippingDescription();	
+			$chargecodeType = $this->getChargecodeMethodType($description);
+			$options[base64_encode($method.'###'.$description)] = array(
+				'type' => $chargecodeType,
+				'description' => $description,
+			);
 		}
 		return $options;
 	}
 	
-	public function getEparcelShippingOptions($currentMethod,$changeDescription)
+	public function getEparcelShippingOptions($currentMethod,$changeDescription,$orderid)
 	{
 		/*$resource = Mage::getSingleton('core/resource');
 	    $readConnection = $resource->getConnection('core_read');
 	    $table = $resource->getTableName('linksync_linksynceparcel_tabelrate');*/
 
 		$options = array();
+		$chargecodeType = $this->getChargecodeType($orderid);
 		$types = $this->getOrderShippingTypes();
 		foreach($types as $code => $val)
 		{
 			$order_method = base64_encode($currentMethod.'###'.$changeDescription);
-			if($code != $order_method)
+			if($code != $order_method && $val['type'] == $chargecodeType)
 			{
-				$options[$code] = $val;
+				$options[$code] = $val['description'];
 			}
 		}
 		return $options;
@@ -6023,14 +6089,27 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 	public function validateInternationalConsignment($data, $order, $country='AU')
 	{
 		$errors = array();
-		if($data['articles_type'] == 'Custom' && !empty($data['article1'])) {
-			$description = $data['article1']['description'];
-			$weight = $data['article1']['weight'];
+		if($data['articles_type'] == 'order_weight') {
+			$weight = Mage::helper('linksynceparcel')->getOrderWeight($order);
+			if($weight == 0)
+			{
+				$default_article_weight = Mage::getStoreConfig('carriers/linksynceparcel/default_article_weight');
+				if($default_article_weight)
+				{
+					$weight = $default_article_weight;
+				}
+			}
+			$description = "Article 1";
 		} else {
-			$articles_type = $data['articles_type'];
-			$articles = explode('<=>',$articles_type);
-			$description = $articles[0];
-			$weight = $articles[1];
+			if($data['articles_type'] == 'Custom' && !empty($data['article1'])) {
+				$description = $data['article1']['description'];
+				$weight = $data['article1']['weight'];
+			} else {
+				$articles_type = $data['articles_type'];
+				$articles = explode('<=>',$articles_type);
+				$description = $articles[0];
+				$weight = $articles[1];
+			}
 		}
 		if(empty($description))
 			$errors[] = '<strong>Article Description</strong> is a required field.';
@@ -6074,10 +6153,18 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			$intArticle = array(
 				'Int. Economy Air' 	=> array('weight' => 20, 'insurance' => 5000),
 				'Int. Express Courier' => array('weight' => 20, 'insurance' => 5000),
+				'Int. Express Courier Document' => array('weight' => 0.5, 'insurance' => 5000),
 				'Int. Express Post' => array('weight' => 20, 'insurance' => 5000),
 				'Int. Pack & Track' => array('weight' => 2, 'insurance' => 500),
 				'Int. Registered' 	=> array('weight' => 2, 'insurance' => 5000),
 			);
+			
+			$isvalidCountries = $this->validCountry();
+			if($chargeCodeData['key'] == 'int_pack_track') {
+				if(!array_key_exists($country,$isvalidCountries)) {
+					$errors[] = 'Pack & Track service is not permitted for this order. Valid countries for Pack & Track service are '. implode(', ', $isvalidCountries);
+				}
+			}
 			
 			$label = $chargeCodeData['labelType'];
 			if(!empty($intArticle[$label]['weight'])){	
@@ -6097,9 +6184,9 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		return false;
 	}
 	
-	public function prepareInternationalReturnAddress()
+	public function prepareInternationalReturnAddress($storeId)
 	{
-		$returnAddressLine2 = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line2'));
+		$returnAddressLine2 = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line2', $storeId));
 		if(!empty($returnAddressLine2))
 		{
 			$returnAddressLine2 = '<returnAddressLine2>'.trim($this->xmlData($returnAddressLine2)).'</returnAddressLine2>';
@@ -6109,7 +6196,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			$returnAddressLine2 = '<returnAddressLine2 />';
 		}
 		
-		$returnAddressLine3 = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line3'));
+		$returnAddressLine3 = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line3', $storeId));
 		if(!empty($returnAddressLine3))
 		{
 			$returnAddressLine3 = '<returnAddressLine3>'.trim($this->xmlData($returnAddressLine3)).'</returnAddressLine3>';
@@ -6119,7 +6206,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			$returnAddressLine3 = '<returnAddressLine3 />';
 		}
 		
-		$returnAddressLine4 = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line4'));
+		$returnAddressLine4 = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line4', $storeId));
 		if(!empty($returnAddressLine4))
 		{
 			$returnAddressLine4 = '<returnAddressLine4>'.trim($this->xmlData($returnAddressLine4)).'</returnAddressLine4>';
@@ -6128,6 +6215,9 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		{
 			$returnAddressLine4 = '<returnAddressLine4 />';
 		}
+		
+		$rphone = trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_phone_number', $storeId)));
+		$rphone = preg_replace('/[^0-9]/s', '', $rphone);
 		
 		$search = array(
 			'[[returnAddressLine1]]',
@@ -6144,17 +6234,17 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		);
 
 		$replace = array(
-			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line1'))),
+			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line1', $storeId))),
 			trim($returnAddressLine2),
 			trim($returnAddressLine3),
 			trim($returnAddressLine4),
-			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_name'))),
-			trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_postcode')),
-			trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_statecode')),
-			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_suburb'))),
-			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_business_name'))),
-			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_email_address'))),
-			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_phone_number'))),
+			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_name', $storeId))),
+			trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_postcode', $storeId)),
+			trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_statecode', $storeId)),
+			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_suburb', $storeId))),
+			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_business_name', $storeId))),
+			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_email_address', $storeId))),
+			$rphone,
 		);
 		
 		$template = file_get_contents($this->getTemplatePath().DS.'international-article-return-address-template.xml');
@@ -6196,12 +6286,29 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			}
 		} else {
 			$state = $address['region'];
+			$isExist = $this->checkCountryRegion($country);
+			if($isExist) {
+				$region = Mage::getModel('directory/region')->load($address['region_id']);
+				$statecode = $region->getCode();
+				$state = $statecode;
+			}
 		}
 		$postalCode = $address['postcode'];
 		$company = empty($address['company']) ? '<deliveryCompanyName/>' : '<deliveryCompanyName>'.$this->xmlData($address['company']).'</deliveryCompanyName>';
 		$firstname = $address['firstname'].' '.$address['lastname'];
 		$email = $address['email'];
 		$phone = $address['telephone'];
+		$phonestr = $phone;
+		$phone = $this->getValidPhoneNumber($phone);
+		if(!empty($phone)) {
+			$withplus = '';
+			$strposphone = strpos($phone, '+');
+			if($strposphone !== false) {
+				$withplus = '+';
+			}
+			$phone = preg_replace('/[^0-9]/s', '', $phone);
+			$phonestr = $withplus . $phone;
+		}
 		
 		$instructions = $data['delivery_instruction'];
 		
@@ -6231,7 +6338,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			trim($street2),
 			trim($street3),
 			trim($street4),
-			trim($phone),
+			trim($phonestr),
 			$company,
 			$country,
 			trim($email),
@@ -6261,7 +6368,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		$productClassification = !empty($data['product_classification'])?$data['product_classification']:991;
 		$hasCommercialValue = !empty($data['has_commercial_value'])?"true":"false";
 		$deliveryFailureDetails = $this->deliveryFailureDetails();
-		$articleContents = $this->getOrderProdItems($data, $order->getId());
+		$articleContents = $this->getOrderProdItems($data, $order->getId(), false, $articlesInfo['total_weight']);
 		
 		if(empty($insuranceValue)) {
 			$insuranceValue = '<insuranceValue/>';
@@ -6312,7 +6419,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		$productClassification = !empty($data['product_classification'])?$data['product_classification']:991;
 		$hasCommercialValue = !empty($data['has_commercial_value'])?"true":"false";
 		$deliveryFailureDetails = $this->deliveryFailureDetails();
-		$articleContents = $this->getOrderProdItems($data, $order->getId());
+		$articleContents = $this->getOrderProdItems($data, $order->getId(), false, $articlesInfo['total_weight']);
 		
 		if(empty($insuranceValue)) {
 			$insuranceValue = '<insuranceValue/>';
@@ -6373,12 +6480,55 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		return $deliveryFailureDetails;
 	}
 	
-	public function getOrderProdItems($data, $orderid, $totalonly=false) 
+	public function getOrderProdItems($data, $orderid, $totalonly=false, $totalweight=false) 
 	{
 		$order = Mage::getModel('sales/order')->load($orderid);
 		$ordered_items = $order->getAllItems();
 		$orderitems = array();
 		if($ordered_items) {
+			$pass = false;
+			$declared_option_value = 0;
+			$singleweight = 0;
+			if($totalweight) {
+				$singleweight = $this->getContentWeight($ordered_items, $totalweight);
+			}
+			
+			if($data['declared_value'] != 0) {
+				$checktotal = 0;
+				$totalqty = 0;
+				$cntr = 0;
+				foreach($ordered_items as $ordereditem) {
+					$ischild = $ordereditem->getParentItemId();
+					if(!$ischild){
+						$qty = $ordereditem->getQtyOrdered();
+						$price = $ordereditem->getPrice();
+						
+						$value = intval($price) * intval($qty);
+						
+						if($cntr > 0) {
+							$totalqty += intval($qty);
+						}
+							
+						$checktotal += $value;
+						$cntr++;
+					}
+				}
+				
+				if($data['declared_value'] == 1) {
+					if($checktotal >= $data['maximum_declared_value']) {
+						$pass = true;
+						$declared_option_value = intval($data['maximum_declared_value']) - intval($totalqty);
+					}
+				}
+				
+				if($data['declared_value'] == 2) {
+					$pass = true;
+					$declared_option_value = intval($data['fixed_declared_value']) - intval($totalqty);
+				}
+			}
+			
+			$alter = false;
+			$cnt = 0;
 			$contents = '';
 			$countryOrigin = !empty($data['country_origin'])?$data['country_origin']:trim(Mage::getStoreConfig('carriers/linksynceparcel/default_country_origin'));
 			$hsTariff = !empty($data['hs_tariff'])?$data['hs_tariff']:trim(Mage::getStoreConfig('carriers/linksynceparcel/default_has_tariff'));
@@ -6388,7 +6538,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 					$qty = $ordered_item->getQtyOrdered();
 					$price = $ordered_item->getPrice();
 					$name = $ordered_item->getName();
-					$weight = $ordered_item->getWeight();
+					$weight = $singleweight;
 					if(empty($weight)) {
 						$default_article_weight = Mage::getStoreConfig('carriers/linksynceparcel/default_article_weight');
 
@@ -6399,11 +6549,30 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 							$weight = 0.00;
 						}
 					}
+					if($price == 0) {
+						$price = 0.01;
+					}
 					$value = intval($price) * intval($qty);
 					$totalCost += $value;
+
+					if($pass) {
+						if($cnt == 0) {
+							$alter = true;
+							$maxval = intval($declared_option_value);
+							$unitval = $maxval / intval($qty);
+							$price = $unitval;
+							$value = $maxval;
+						}
+						
+						if($alter && $cnt > 0) {
+							$price = 1;
+							$value = intval($qty);
+						}
+					}
+					
 					
 					$contents .= '<content>';
-					$contents .= '<goodsDescription>'. $name .'</goodsDescription>';
+					$contents .= '<goodsDescription>'. trim($this->xmlData($name)) .'</goodsDescription>';
 					$contents .= '<quantity>'. intval($qty) .'</quantity>';
 					$contents .= '<unitValue>'. number_format($price, 2) .'</unitValue>';
 					$contents .= '<value>'. number_format($value, 2) .'</value>';
@@ -6411,12 +6580,29 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 					$contents .= '<countryOriginCode>'. $countryOrigin .'</countryOriginCode>';
 					$contents .= '<hSTariff>'. $hsTariff .'</hSTariff>';
 					$contents .= '</content>';
+					
+					$cnt++;
 				}
 			}
+			
 			return ($totalonly)?$totalCost:array('totalcost' => $totalCost, 'contents' => $contents);
 		} else {
 			return false;
 		}
+	}
+	
+	public function getContentWeight($items, $totalweight)
+	{
+		$cntr = 0;
+		foreach($items as $ordered_item) {
+			$ischild = $ordered_item->getParentItemId();
+			if(!$ischild){
+				$cntr++;
+			}
+		}
+		
+		$weight = $totalweight/$cntr;
+		return $weight;
 	}
 	
 	public function generateDocument($consignmentNumber,$labelContent,$field)
@@ -6466,6 +6652,139 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		}
 		return false;
 	}
+	
+	public function isAppltytoallOptionIsON() 
+	{
+		$resource = Mage::getSingleton('core/resource');
+	    $readConnection = $resource->getConnection('core_read');
+	    $table = $resource->getTableName('sales_flat_order');
+		
+		$status_condition = "m.status='pending' OR m.status='holded'";
+		$chosen_statuses = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/chosen_statuses');
+		if(!empty($chosen_statuses))
+		{
+			$chosen_statuses = explode(',',$chosen_statuses);
+			if(count($chosen_statuses) > 0)
+			{
+				$status_condition = '';
+				foreach($chosen_statuses as $chosen_status)
+				{
+					if(!empty($chosen_status))
+						$status_condition .= 'm.status="'.$chosen_status.'" OR ';
+				}
+
+				$status_condition = substr($status_condition, 0, -4);
+			}
+		}
+		
+
+		$query = "SELECT m.entity_id, m.shipping_description, order_address.country_id FROM {$table} AS m LEFT JOIN ". $resource->getTableName('sales_flat_order_address') ." AS order_address ON m.shipping_address_id = order_address.entity_id WHERE ". $status_condition;
+		
+		$results = $readConnection->fetchAll($query);
+		if($results && count($results) > 0) {
+			$order_ids = array();
+			foreach($results as $result) {
+				$entity_id = $result['entity_id'];
+				$country_id = $result['country_id'];
+				$shipping_description = $result['shipping_description'];
+				
+				$isDespatched = $this->checkDespatchedConsignment($result['entity_id']);
+				if($isDespatched) {
+					if($country_id == 'AU') {
+						$order_ids[] = $result['entity_id'];
+					} else {
+						$exist = $this->isMethodExist($shipping_description);
+						if($exist) {
+							$order_ids[] = $result['entity_id'];
+						}
+					}
+				}
+			}
+			return !empty($order_ids)?$order_ids:false;
+		}
+		return false;
+	}
+	
+	public function isMethodExist($method)
+	{
+		$shipping_method = $this->getNonlinksyncShippingTypeChargecode($method);
+		if($shipping_method) {
+			return true;
+		}
+		return false;
+	}
+	
+	public function validCountry()
+	{
+		$countries = array(
+			'BE' => 'Belgium',
+			'CA' => 'Canada',
+			'CN' => 'China',
+			'HR' => 'Croatia',
+			'DK' => 'Denmark',
+			'EE' => 'Estonia',
+			'FR' => 'France',
+			'DE' => 'Germany',
+			'HK' => 'Hong Kong',
+			'HU' => 'Hungary',
+			'IE' => 'Ireland',
+			'IL' => 'Israel',
+			'KR' => 'Korea, Republic of (South Korea)',
+			'LT' => 'Lithuania',
+			'MY' => 'Malaysia',
+			'MT' => 'Malta',
+			'NL' => 'Netherlands',
+			'NZ' => 'New Zealand',
+			'PL' => 'Poland',
+			'PT' => 'Portugal',
+			'SG' => 'Singapore',
+			'SI' => 'Slovenia',
+			'ES' => 'Spain',
+			'SE' => 'Sweden',
+			'GB' => 'United Kingdom',
+			'US' => 'USA'
+		);
+		
+		return $countries;
+	}
+	
+	public function getValidPhoneNumber($str) {
+		$strpos = strpos($str, ';');
+		if($strpos !== false) {
+			$strex = explode(';', $str);
+			$strpos1 = strpos($strex[1], '&');
+			if($strpos1 !== false) {
+				$strex1 = explode('&', $strex[1]);
+				return $strex1[0];
+			}
+			return $strex[1];
+		}
+		return $str;
+	}
+	
+	public function checkDespatchedConsignment($order_id)
+	{
+		$resource = Mage::getSingleton('core/resource');
+	    $readConnection = $resource->getConnection('core_read');
+	    $table = $resource->getTableName('linksync_linksynceparcel_consignment');
+
+		$query = "select despatched from {$table} where order_id = '{$order_id}'";
+		$results = $readConnection->fetchAll($query);
+		if(!empty($results)) {
+			$display = array();
+			foreach($results as $result) {
+				if($result['despatched'] == 1) {
+					$display[] = 1;
+				}
+			}
+			if(!empty($display)) {
+				return false;
+			}
+			return true;
+		} else {
+			return true;
+		}
+	}
 
 	public function isDisplayConsignmentViewTableShip()
 	{
@@ -6511,5 +6830,19 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			return false;
 		}
 		return true;
+	}
+	
+	public function checkCountryRegion($countrycode)
+	{
+		$resource = Mage::getSingleton('core/resource');
+	    $readConnection = $resource->getConnection('core_read');
+	    $table = $resource->getTableName('directory_country_region');
+
+		$query = "SELECT country_id FROM {$table} WHERE country_id='". $countrycode ."'";
+		$results = $readConnection->fetchAll($query);
+		if(!empty($results)) {
+			return true;
+		}
+		return false;
 	}
 }

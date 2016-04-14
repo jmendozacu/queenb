@@ -2,7 +2,7 @@
 <config>
 	<modules>
 		<Linksync_Linksynceparcel>
-			<version>1.1.1 Beta 7</version>
+			<version>1.1.1 Beta 8</version>
 		</Linksync_Linksynceparcel>
 	</modules>
 	<frontend>
@@ -300,6 +300,11 @@
 							</admin>
 						</children>
 					</settings>
+					<help module="linksynceparcel">
+						<title>Help</title>
+						<sort_order>11</sort_order>
+						<action>linksynceparcel/adminhtml_help</action>
+					</help>
 				</children>
 			</linksynceparcel>
         </menu>
@@ -317,6 +322,7 @@
 				<handling_fee>0.00</handling_fee>
 				<insurance>0</insurance>
 				<signature_required>1</signature_required>
+				<safe_drop>1</safe_drop>
 				<print_return_labels>0</print_return_labels>
 				<partial_delivery_allowed>0</partial_delivery_allowed>
 				<post_email_notification>0</post_email_notification>

@@ -97,8 +97,13 @@ class Linksync_Linksynceparcel_Model_Api extends Mage_Core_Model_Abstract
 				{
 					if(LINKSYNC_DEBUG == 1)
 					{
-						Mage::log('createConsignment Request: '.$client->__getLastRequest(), null, 'linksync_eparcel.log', true);
-						Mage::log('createConsignment Response: '.$client->__getLastResponse(), null, 'linksync_eparcel.log', true);
+						$last_req = $client->__getLastRequest();
+						$c_last_req = $this->removeEncodedData($last_req, array('arg1'));
+						Mage::log('createConsignment Request: '.$c_last_req, null, 'linksync_eparcel.log', true);
+						
+						$last_res = $client->__getLastResponse();
+						$c_last_res = $this->removeEncodedData($last_res, array('lpsLabels'));
+						Mage::log('createConsignment Response: '.$c_last_res, null, 'linksync_eparcel.log', true);
 					}
 					return $stdClass;
 				}
@@ -149,8 +154,13 @@ class Linksync_Linksynceparcel_Model_Api extends Mage_Core_Model_Abstract
 			{
 				if(LINKSYNC_DEBUG == 1)
 				{
-					//Mage::log('modifyConsignment Request: '.$client->__getLastRequest(), null, 'linksync_eparcel.log', true);
-					Mage::log('modifyConsignment Response: '.$client->__getLastResponse(), null, 'linksync_eparcel.log', true);
+					$last_req = $client->__getLastRequest();
+					$c_last_req = $this->removeEncodedData($last_req, array('arg2'));
+					Mage::log('modifyConsignment Request: '.$c_last_req, null, 'linksync_eparcel.log', true);
+					
+					$last_res = $client->__getLastResponse();
+					$c_last_res = $this->removeEncodedData($last_res, array('lpsLabels'));
+					Mage::log('modifyConsignment Response: '.$c_last_res, null, 'linksync_eparcel.log', true);
 				}
 				return $stdClass;
 			}
@@ -657,6 +667,58 @@ class Linksync_Linksynceparcel_Model_Api extends Mage_Core_Model_Abstract
 		}
 	}
 	
+	public function getLabelsByInternationalConsignments($consignments,$chargeCode)
+	{
+		try
+		{
+			if(LINKSYNC_DEBUG == 1)
+			{
+				$client = new SoapClient($this->getWebserviceUrl(true).'?WSDL',array('trace'=>1));
+			}
+			else
+			{
+				$client = new SoapClient($this->getWebserviceUrl(true).'?WSDL');
+			}
+			
+			$laid = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/laid');
+			$chargeCodeData = Mage::helper('linksynceparcel')->getChargeCodes();
+			$codeData = $chargeCodeData[$chargeCode];
+			$service = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/'. $codeData['key']);
+			$labelType = explode('_', $service);
+			$arg3 = $labelType[0];
+			$arg4 = ($labelType[1]==0)?'false':'true';
+			$arg5 = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/'. $codeData['key'] .'_left_offset');
+			$arg6 = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/'. $codeData['key'] .'_top_offset');
+			
+			$stdClass = $client->getLabelsByConsignments($laid,explode(',',$consignments),$arg3,$arg4,$arg5,$arg6,'true'); 
+
+			if($stdClass)
+			{
+				if(LINKSYNC_DEBUG == 1)
+				{
+					Mage::log('getLabelsByConsignments  Request: '.$client->__getLastRequest(), null, 'linksync_eparcel.log', true);
+					//Mage::log('getLabelsByConsignments  Response: '.$client->__getLastResponse(), null, 'linksync_eparcel.log', true);
+				}
+				return $stdClass;
+			}
+			
+			if(LINKSYNC_DEBUG == 1 && $client)
+			{
+				Mage::log('getLabelsByConsignments  Request: '.$client->__getLastRequest(), null, 'linksync_eparcel.log', true);
+				Mage::log('getLabelsByConsignments  Response: '.$client->__getLastResponse(), null, 'linksync_eparcel.log', true);
+			}
+		}
+		catch(Exception $e)
+		{
+			if(LINKSYNC_DEBUG == 1 && $client)
+			{
+				Mage::log('getLabelsByConsignments  Request: '.$client->__getLastRequest(), null, 'linksync_eparcel.log', true);
+				Mage::log('getLabelsByConsignments  Response: '.$client->__getLastResponse(), null, 'linksync_eparcel.log', true);
+			}
+			throw $e;
+		}
+	}
+	
 	public function getReturnLabelsByConsignments($consignments)
 	{
 		try
@@ -879,5 +941,10 @@ class Linksync_Linksynceparcel_Model_Api extends Mage_Core_Model_Abstract
 			}
 			return $e->getMessage();
 		}
+	}
+	
+	public function removeEncodedData($string,$tags)
+	{
+		return preg_replace('#<(' . implode( '|', $tags) . ')(?:[^>]+)?>.*?</\1>#s', '', $string);
 	}
 }

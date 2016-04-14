@@ -19,14 +19,6 @@ $note = 'Note that once you save your API Key it will be permanently linked to '
 if($display)
 {
 ?>
-	<?php
-	$protocol = 'http';
-	if( isset($_SERVER['HTTPS']) && (!empty($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) != 'off') )
-		$protocol = 'https';
-	?>
-	<link href="<?php echo $protocol?>://ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/themes/smoothness/jquery-ui.css" rel="stylesheet" />
-	<script type="text/javascript" src="<?php echo Mage::getBaseUrl('skin').'frontend/base/default/eparcel/js/jquery-1.11.0.min.js';?>"></script>
-	<script src="<?php echo $protocol?>://ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.min.js"></script>
 	<script>
 	var api_key_note = '<?php echo $note?>';
 	$jEparcel = jQuery.noConflict();
@@ -79,26 +71,25 @@ if($display)
 			}
 		});
 		
-		$jEparcel('ul#nav li.level0').each(function(){
-			var element = $jEparcel(this);
-			var topMenu = element.find('a span').html();
-			if(topMenu == 'eParcel')
-			{
-				var lastItem = element.find('ul li.level1:last');
-				var newItem = lastItem.clone();
-				newItem.removeClass('parent');
-				newItem.find('ul').remove();
-				var newItemLink = newItem.find('a');
-				newItemLink.attr('href','http://www.linksync.com/help/eparcel-magento');
-				newItemLink.attr('target','_blank');
-				newItemLink.removeAttr('onclick');
-				newItemLink.find('span').html('Help');
-				lastItem.parent().append(newItem);
-				lastItem.removeClass('last');
-				var lastItemLink = element.find('ul li.level2:last').find('a').attr('href');
-				element.find('ul li.level2:last').find('a').attr('href',lastItemLink+'#carriers_linksynceparcel-head');
+		$jEparcel('#carriers_linksynceparcel_has_commercial_value').change(function() {
+			if($jEparcel(this).val() == 1) {
+				$jEparcel('#carriers_linksynceparcel_default_product_classification').attr('disabled', true);
+				$jEparcel('#carriers_linksynceparcel_default_product_classification').val('991');
+				$jEparcel('#row_carriers_linksynceparcel_classification_explanation').show();
+				$jEparcel('#carriers_linksynceparcel_classification_explanation').attr('disabled', false);
+			} else {
+				$jEparcel('#carriers_linksynceparcel_default_product_classification').attr('disabled', false);
 			}
 		});
+		
+		if($jEparcel('#carriers_linksynceparcel_has_commercial_value').val() == 1) {
+			$jEparcel('#carriers_linksynceparcel_default_product_classification').attr('disabled', true);
+			$jEparcel('#carriers_linksynceparcel_default_product_classification').val('991');
+			$jEparcel('#row_carriers_linksynceparcel_classification_explanation').show();
+			$jEparcel('#carriers_linksynceparcel_classification_explanation').attr('disabled', false);
+		} else {
+			$jEparcel('#carriers_linksynceparcel_default_product_classification').attr('disabled', false);
+		}
 		
 		$jEparcel('.consignment-ui-hide').parent().hide();
 		$jEparcel('.consignment-ui-hide').css('width','140px');

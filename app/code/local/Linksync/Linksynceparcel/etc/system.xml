@@ -4,7 +4,7 @@
         <carriers>
             <groups>
                 <linksynceparcel translate="label">
-                    <label>linksync eParcel 1.1.1 Beta 7</label>
+                    <label>linksync eParcel 1.1.1 Beta 8</label>
                     <frontend_type>text</frontend_type>
                     <sort_order>600</sort_order>
                     <show_in_default>1</show_in_default>
@@ -300,12 +300,37 @@
                             <show_in_store>1</show_in_store>
 							<tooltip>Default setting for using Australia Post's email notification service on consignments. This default can be overridden when creating consignments.</tooltip>
                         </post_email_notification>
+						<apply_to_all translate="label">
+                            <label>Apply eParcel shipping to all AU orders</label>
+                            <frontend_type>select</frontend_type>
+							<source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>36</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<tooltip>Select this option if you want to apply eParcel shipping and management to all of your existing Magento shipping rules and options, including orders via M2E Pro. If you would like to apply different eParcel shipping types to the different shipping methods you offer, we recommend you use our 'Assign Shipping Types' option instead.</tooltip>
+                        </apply_to_all>
+						
+						<default_chargecode translate="label">
+                            <label>Default Charge code for above orders</label>
+	                        <frontend_type>select</frontend_type>
+							<source_model>linksynceparcel/system_config_source_chargecode</source_model>
+                            <sort_order>37</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+							<validate>required-entry</validate>
+							<depends>
+								<apply_to_all>1</apply_to_all>
+							</depends>
+							<tooltip>Enter the eParcel Charge Code you want to associate with all of your existing Magento shipping rules and options.</tooltip>
+                        </default_chargecode>
 						
 						<int_insurance translate="label">
                             <label>Insurance international</label>
                             <frontend_type>select</frontend_type>
                             <source_model>adminhtml/system_config_source_yesno</source_model>
-                            <sort_order>36</sort_order>
+                            <sort_order>38</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>0</show_in_store>
@@ -314,7 +339,7 @@
                             <label>Order value as Insured Value</label>
                             <frontend_type>select</frontend_type>
                             <source_model>adminhtml/system_config_source_yesno</source_model>
-                            <sort_order>37</sort_order>
+                            <sort_order>39</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>0</show_in_store>
@@ -325,7 +350,7 @@
 						<default_int_insurance_value translate="label">
                             <label>Default Insurance Value</label>
                             <frontend_type>text</frontend_type>
-                            <sort_order>38</sort_order>
+                            <sort_order>40</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>0</show_in_store>
@@ -335,30 +360,41 @@
 							</depends>
                         </default_int_insurance_value>
 						<order_value_declared_value translate="label">
-                            <label>Order value as Declared Value</label>
+                            <label>Declare Value</label>
                             <frontend_type>select</frontend_type>
-                            <source_model>adminhtml/system_config_source_yesno</source_model>
-                            <sort_order>39</sort_order>
+                            <source_model>linksynceparcel/system_config_source_declare</source_model>
+                            <sort_order>41</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>0</show_in_store>
                         </order_value_declared_value>
-						<default_int_declared_value translate="label">
-                            <label>Default Declared Value</label>
+						<maximum_declared_value translate="label">
+                            <label>Maximum Declared Value</label>
                             <frontend_type>text</frontend_type>
-                            <sort_order>41</sort_order>
+                            <sort_order>42</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>0</show_in_store>
 							<depends>
 								<order_value_declared_value>1</order_value_declared_value>
 							</depends>
-                        </default_int_declared_value>
+                        </maximum_declared_value>
+						<fixed_declared_value translate="label">
+                            <label>Fixed Declared Value</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>43</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+							<depends>
+								<order_value_declared_value>2</order_value_declared_value>
+							</depends>
+                        </fixed_declared_value>
 						<has_commercial_value translate="label">
                             <label>Has Commercial Value</label>
                             <frontend_type>select</frontend_type>
                             <source_model>adminhtml/system_config_source_yesno</source_model>
-                            <sort_order>42</sort_order>
+                            <sort_order>44</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>0</show_in_store>
@@ -367,7 +403,7 @@
                             <label>Default Product Classification</label>
 							<frontend_type>select</frontend_type>
                             <source_model>linksynceparcel/system_config_source_classification</source_model>
-                            <sort_order>43</sort_order>
+                            <sort_order>45</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
@@ -375,7 +411,7 @@
 						<classification_explanation translate="label">
                             <label>Classification Explanation</label>
                             <frontend_type>text</frontend_type>
-                            <sort_order>44</sort_order>
+                            <sort_order>46</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
@@ -388,7 +424,7 @@
                             <label>Default Country of Origin</label>
                             <frontend_type>select</frontend_type>
                             <source_model>adminhtml/system_config_source_country</source_model>
-                            <sort_order>45</sort_order>
+                            <sort_order>47</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
@@ -396,7 +432,7 @@
 						<default_has_tariff translate="label">
                             <label>Default HS Tariff</label>
                             <frontend_type>text</frontend_type>
-                            <sort_order>46</sort_order>
+                            <sort_order>48</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
@@ -407,7 +443,7 @@
 						<default_contents translate="label">
                             <label>Default Contents</label>
                             <frontend_type>text</frontend_type>
-                            <sort_order>47</sort_order>
+                            <sort_order>49</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
@@ -724,32 +760,6 @@
 							<validate>validate-number</validate>
 							<tooltip>Set a default Article Length. This value is used as the default value when selecting 'Custom' article type, and can be overridden when creating articles. Leave blank if you don't want to set a default.</tooltip>
                         </default_article_length>
-						
-						<apply_to_all translate="label">
-                            <label>Apply eParcel shipping to all AU orders</label>
-                            <frontend_type>select</frontend_type>
-							<source_model>adminhtml/system_config_source_yesno</source_model>
-                            <sort_order>95</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>1</show_in_store>
-							<tooltip>Select this option if you want to apply eParcel shipping and management to all of your existing Magento shipping rules and options, including orders via M2E Pro. If you would like to apply different eParcel shipping types to the different shipping methods you offer, we recommend you use our 'Assign Shipping Types' option instead.</tooltip>
-                        </apply_to_all>
-						
-						<default_chargecode translate="label">
-                            <label>Default Charge code for above orders</label>
-	                        <frontend_type>select</frontend_type>
-							<source_model>linksynceparcel/system_config_source_chargecode</source_model>
-                            <sort_order>96</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>1</show_in_store>
-							<validate>required-entry</validate>
-							<depends>
-								<apply_to_all>1</apply_to_all>
-							</depends>
-							<tooltip>Enter the eParcel Charge Code you want to associate with all of your existing Magento shipping rules and options.</tooltip>
-                        </default_chargecode>
 						
 						<display_order_status translate="label">
                             <label>Display order status on Consignment View</label>

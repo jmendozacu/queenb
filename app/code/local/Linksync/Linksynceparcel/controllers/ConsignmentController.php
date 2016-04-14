@@ -266,10 +266,12 @@ class Linksync_Linksynceparcel_ConsignmentController extends Mage_Adminhtml_Cont
 					$consignmentNumber = $consignmentData->consignmentNumber;
 					$manifestNumber = $consignmentData->manifestNumber;
 					Mage::helper('linksynceparcel')->updateConsignmentTable2($consignmentNumber,'weight', $total_weight);
+					Mage::helper('linksynceparcel')->updateConsignmentTable2($consignmentNumber,'is_label_printed', 0);
 					Mage::helper('linksynceparcel')->updateArticles($order_id,$consignmentNumber,$consignmentData->articles,$data,$content);
 					Mage::helper('linksynceparcel')->insertManifest($manifestNumber);
-					Mage::helper('linksynceparcel')->labelCreate($consignmentNumber);
-					Mage::helper('linksynceparcel')->returnLabelCreate($consignmentNumber);
+					
+					$labelContent = $consignmentData->lpsLabels->labels->label;
+					Mage::helper('linksynceparcel')->generateDocument($consignmentNumber,$labelContent,'label');
 				
 					$this->_getSession()->addSuccess($this->__('Article #'.$articleNumber.' has been deleted from consignment #'.$consignmentNumber.' successfully.'));
 					$this->_redirect("adminhtml/sales_order/view", array('order_id' => $order_id ,'active_tab' => 'linksync_eparcel'));
@@ -628,11 +630,8 @@ class Linksync_Linksynceparcel_ConsignmentController extends Mage_Adminhtml_Cont
 				Mage::helper('linksynceparcel')->updateArticles($order_id,$consignmentNumber,$consignmentData->articles,$data,$content);
 				Mage::helper('linksynceparcel')->insertManifest($manifestNumber);
 
-				Mage::helper('linksynceparcel')->labelCreate($consignmentNumber);
-				if($data['print_return_labels'])
-				{
-					Mage::helper('linksynceparcel')->returnLabelCreate($consignmentNumber);
-				}
+				$labelContent = $consignmentData->lpsLabels->labels->label;
+				Mage::helper('linksynceparcel')->generateDocument($consignmentNumber,$labelContent,'label');
 
 				$this->_getSession()->addSuccess($this->__('The article has been added successfully.'));
 				$this->_redirect("adminhtml/sales_order/view", array('order_id' => $order_id,'active_tab' => 'linksync_eparcel'));

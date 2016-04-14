@@ -135,7 +135,27 @@ $presets = Mage::getModel('linksynceparcel/preset')
                         <label class="normal" for="article_weight">
                             <?php echo Mage::helper('sales')->__('Weight (Kgs):') ?><span class="required">*</span>
                         </label>
-                        <input size="10" style="text-align:center" id="article_weight" name="article[weight]" class="required-entry positive-number maximum-value" label="Weight" value="<?php echo ($weight > $weightPerArticle) ? $weightPerArticle : $weight?>"/>
+						<?php
+						$intweight = $weight;
+						if($country != 'AU') {
+							$chargeCode = Mage::helper('linksynceparcel')->getChargeCode($this->getOrder());
+							$allowedChargeCodes = Mage::helper('linksynceparcel')->getChargeCodes();
+							$chargeCodeData = $allowedChargeCodes[$chargeCode];
+							
+							$intArticle = array(
+								'Int. Economy Air' 	=> array('weight' => 20),
+								'Int. Express Courier' => array('weight' => 20),
+								'Int. Express Courier Document' => array('weight' => 0.5),
+								'Int. Express Post' => array('weight' => 20),
+								'Int. Pack & Track' => array('weight' => 2),
+								'Int. Registered' 	=> array('weight' => 2),
+							);
+							
+							$label = $chargeCodeData['labelType'];
+							$intweight = $intArticle[$label]['weight'];
+						}
+						?>
+                        <input size="10" style="text-align:center" id="article_weight" name="article[weight]" class="required-entry positive-number maximum-value" label="Weight" value="<?php echo ($weight > $weightPerArticle) ? $weightPerArticle : $intweight; ?>"/>
                     </span>
                     <span class="field-row1">
                         <label class="normal" for="article_height">
@@ -280,6 +300,40 @@ $presets = Mage::getModel('linksynceparcel/preset')
                     <td><input type="text" id="default_insurance_value" name="insurance_value" value="<?php echo Mage::getStoreConfig('carriers/linksynceparcel/default_int_insurance_value')?>" /></td>
                   </tr>
 				  <tr>
+                    <td><?php echo Mage::helper('sales')->__('Declared Value') ?></td>
+                    <td>
+						<select id="declared_value" name="declared_value" style="width:140px">
+							<option value="0" <?php echo (Mage::getStoreConfig('carriers/linksynceparcel/order_value_declared_value')==0?'selected':'')?>>Order Value</option>
+							<option value="1" <?php echo (Mage::getStoreConfig('carriers/linksynceparcel/order_value_declared_value')==1?'selected':'')?>>Order Value with Maximum</option>
+							<option value="2" <?php echo (Mage::getStoreConfig('carriers/linksynceparcel/order_value_declared_value')==2?'selected':'')?>>Fixed Value</option>
+						</select>
+					</td>
+                  </tr>
+				  <?php
+					$maximum_declared_value_attr = 'hide-tr';
+					$maximum_declared_value = "";
+					if (Mage::getStoreConfig('carriers/linksynceparcel/order_value_declared_value')==1){
+						$maximum_declared_value = Mage::getStoreConfig('carriers/linksynceparcel/maximum_declared_value');
+						$maximum_declared_value_attr = 'show-tr';
+					}
+				  ?>
+				  <tr id="maximum_declared_value_holder" class="<?php echo $maximum_declared_value_attr; ?>">
+                    <td><?php echo Mage::helper('sales')->__('Maximum Declared Value') ?></td>
+                    <td><input type="text" id="maximum_declared_value" name="maximum_declared_value" value="<?php echo $maximum_declared_value; ?>" /></td>
+                  </tr>
+				  <?php
+					$fixed_declared_value_attr = 'hide-tr';
+					$fixed_declared_value = "";
+					if (Mage::getStoreConfig('carriers/linksynceparcel/order_value_declared_value')==2){
+						$fixed_declared_value = Mage::getStoreConfig('carriers/linksynceparcel/fixed_declared_value');
+						$fixed_declared_value_attr = 'show-tr';
+					}
+				  ?>
+				  <tr id="fixed_declared_value_holder" class="<?php echo $fixed_declared_value_attr; ?>">
+                    <td><?php echo Mage::helper('sales')->__('Fixed Declared Value') ?></td>
+                    <td><input type="text" id="fixed_declared_value" name="fixed_declared_value" value="<?php echo $fixed_declared_value; ?>" /></td>
+                  </tr>
+				  <tr>
                     <td><?php echo Mage::helper('sales')->__('Export Declaration Number') ?></td>
                     <td><input type="text" id="export_declaration_number" name="export_declaration_number" /></td>
                   </tr>
@@ -377,7 +431,7 @@ $presets = Mage::getModel('linksynceparcel/preset')
             </form>
             
         </div>
-        <?php $consignments = Mage::helper('linksynceparcel')->getConsignments($this->getOrder()->getId());?>
+        <?php $consignments = Mage::helper('linksynceparcel')->getConsignments($this->getOrder()->getId(), true);?>
         <?php 
             if($consignments && count($consignments) > 0)
             {
@@ -707,12 +761,21 @@ $presets = Mage::getModel('linksynceparcel/preset')
 				}
 			});
 			$jEparcel("#declared_value").on('change', function() {
-				if($jEparcel(this).val() == 1) {
-					$jEparcel('.declared_value_text_field').removeClass('show-tr');
-					$jEparcel('.declared_value_text_field').addClass('hide-tr');
+				if($jEparcel(this).val() == 2) {
+					$jEparcel('#fixed_declared_value_holder').removeClass('hide-tr');
+					$jEparcel('#fixed_declared_value_holder').addClass('show-tr');
+					$jEparcel('#maximum_declared_value_holder').removeClass('show-tr');
+					$jEparcel('#maximum_declared_value_holder').addClass('hide-tr');
+				} else if($jEparcel(this).val() == 1) {
+					$jEparcel('#maximum_declared_value_holder').removeClass('hide-tr');
+					$jEparcel('#maximum_declared_value_holder').addClass('show-tr');
+					$jEparcel('#fixed_declared_value_holder').removeClass('show-tr');
+					$jEparcel('#fixed_declared_value_holder').addClass('hide-tr');
 				} else {
-					$jEparcel('.declared_value_text_field').removeClass('hide-tr');
-					$jEparcel('.declared_value_text_field').addClass('show-tr');
+					$jEparcel('#maximum_declared_value_holder').removeClass('show-tr');
+					$jEparcel('#maximum_declared_value_holder').addClass('hide-tr');
+					$jEparcel('#fixed_declared_value_holder').removeClass('show-tr');
+					$jEparcel('#fixed_declared_value_holder').addClass('hide-tr');
 				}
 			});
 			$jEparcel('#has_commercial_value').change(function() {

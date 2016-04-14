@@ -200,7 +200,131 @@ class Linksync_Linksynceparcel_Adminhtml_ConsignmentController extends Mage_Admi
 						$isInternational = true;
 				}
 				
-				if(!$isInternational) {
+				$valid = true;
+				if($isExpressCode && $isStandardCode) {
+					$valid = false;
+				}
+				if($isExpressCode && $isInternational) {
+					$valid = false;
+				}
+				if($isStandardCode && $isInternational) {
+					$valid = false;
+				}
+				
+				if($valid) {
+					$consignmentNumbers = array();
+					$chargeCodes = array();
+					foreach ($ids as $id) 
+					{
+						$values = explode('_',$id);
+						$orderId = (int)($values[0]);
+						$consignmentNumber = $values[1];
+						$order = Mage::getModel('sales/order')->load($orderId);
+						$incrementId = $order->getIncrementId();
+						if($consignmentNumber != '0')
+						{
+							$consignmentNumbers[] = $consignmentNumber;
+							
+							$chargeCode = Mage::helper('linksynceparcel')->getOrderChargeCode($orderId,$consignmentNumber);
+							$chargeCodes[] = $chargeCode;
+							$labelContent = Mage::getModel('linksynceparcel/api')->getLabelsByConsignments($consignmentNumber,$chargeCode);
+							if($labelContent)
+							{
+								$filename = $consignmentNumber.'.pdf';
+								$filepath = Mage::getBaseDir().DS.'media'.DS.'linksync'.DS.'label'.DS.'consignment'.DS.$filename;
+								$handle = fopen($filepath,'wb');
+								fwrite($handle, $labelContent);
+								fclose($handle);
+	
+								Mage::helper('linksynceparcel')->updateConsignmentTable($orderId,$consignmentNumber,'label', $filename);
+								Mage::helper('linksynceparcel')->updateConsignmentTable($orderId,$consignmentNumber,'is_label_created', 1);
+								Mage::helper('linksynceparcel')->updateConsignmentTable($orderId,$consignmentNumber,'is_label_printed', 1);
+							}
+						}
+					}
+					
+					if(count($consignmentNumbers) > 0)
+					{
+						$labelContent = Mage::getModel('linksynceparcel/api')->getLabelsByConsignments(implode(',',$consignmentNumbers),$chargeCodes[0]);
+						if($labelContent)
+						{
+							$filename = 'bulk-consignments-label.pdf';
+							$filepath = Mage::getBaseDir().DS.'media'.DS.'linksync'.DS.'label'.DS.'consignment'.DS.$filename;
+							$handle = fopen($filepath,'wb');
+							fwrite($handle, $labelContent);
+							fclose($handle);
+							$labelLink = Mage::helper('linksynceparcel')->getConsignmentLabelUrl();
+							$success = Mage::helper('linksynceparcel')->__('Label is generated. <a href="%s" target="_blank" style="color:blue; font-weight:bold; font-size:14px; text-decoration:underline">Please click here to view it.</a>',$labelLink.$filename.'?'.time());
+							Mage::getSingleton('adminhtml/session')->addSuccess($success);
+							/*Mage::app()->getFrontController()->getResponse()->setRedirect($labelLink.$filename)->sendResponse();
+							$this->_redirectUrl($labelLink.$filename);
+							exit;*/
+						}
+						else
+						{
+							$error = Mage::helper('linksynceparcel')->__('Failed to generate label');
+							Mage::getSingleton('adminhtml/session')->addError($error);
+						}
+					}
+					else
+					{
+						$error = Mage::helper('linksynceparcel')->__('None of the selected items have consignments');
+						Mage::getSingleton('adminhtml/session')->addError($error);
+					}
+				} else {
+					$error = Mage::helper('linksynceparcel')->__('You can only print multiple consignment labels for the same Delivery Type - they must be all Express Post or all eParcel Standard.');
+					Mage::getSingleton('adminhtml/session')->addError($error);
+				}
+            } 
+			catch (Exception $e) 
+			{
+                Mage::getSingleton('adminhtml/session')->addError(ucfirst($e->getMessage()));
+            }
+        }
+        $this->_redirect('*/*/index');
+    }
+	
+	public function massGenerateDocumentsAction() 
+	{
+        $ids = $this->getRequest()->getParam('order_consignment');
+		if (!is_array($ids))
+		{
+			if(!empty($ids))
+			{
+				$ids = array($ids);
+			}
+		}
+
+        if (!is_array($ids)) 
+		{
+            Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')->__('Please select item(s)'));
+        } 
+		else 
+		{
+            try 
+			{
+				$sameGroup = true;
+				$isExpressCode = false;
+				$isStandardCode = false;
+				$isInternational = false;
+				
+				foreach ($ids as $id) 
+				{
+					$values = explode('_',$id);
+					$orderId = (int)($values[0]);
+					
+					$chargeCode = Mage::helper('linksynceparcel')->getOrderChargeCode($orderId);
+					$chargeCodes = Mage::helper('linksynceparcel')->getChargeCodes();
+					$chargeCodeData = $chargeCodes[$chargeCode];
+					if($chargeCodeData['serviceType'] == 'express')
+						$isExpressCode = true;
+					if($chargeCodeData['serviceType'] == 'standard')
+						$isStandardCode = true;
+					if($chargeCodeData['serviceType'] == 'international')
+						$isInternational = true;
+				}
+				
+				if($isInternational) {
 					$valid = true;
 					if($isExpressCode && $isStandardCode) {
 						$valid = false;
@@ -228,7 +352,7 @@ class Linksync_Linksynceparcel_Adminhtml_ConsignmentController extends Mage_Admi
 								
 								$chargeCode = Mage::helper('linksynceparcel')->getOrderChargeCode($orderId,$consignmentNumber);
 								$chargeCodes[] = $chargeCode;
-								$labelContent = Mage::getModel('linksynceparcel/api')->getLabelsByConsignments($consignmentNumber,$chargeCode);
+								$labelContent = Mage::getModel('linksynceparcel/api')->getLabelsByInternationalConsignments($consignmentNumber,$chargeCode);
 								if($labelContent)
 								{
 									$filename = $consignmentNumber.'.pdf';
@@ -237,25 +361,24 @@ class Linksync_Linksynceparcel_Adminhtml_ConsignmentController extends Mage_Admi
 									fwrite($handle, $labelContent);
 									fclose($handle);
 		
-									Mage::helper('linksynceparcel')->updateConsignmentTable($orderId,$consignmentNumber,'label', $filename);
-									Mage::helper('linksynceparcel')->updateConsignmentTable($orderId,$consignmentNumber,'is_label_created', 1);
-									Mage::helper('linksynceparcel')->updateConsignmentTable($orderId,$consignmentNumber,'is_label_printed', 1);
+									Mage::helper('linksynceparcel')->updateConsignmentTable($orderId,$consignmentNumber,'customdocs', $filename);
+									Mage::helper('linksynceparcel')->updateConsignmentTable($orderId,$consignmentNumber,'is_customdocs_printed', 1);
 								}
 							}
 						}
 						
 						if(count($consignmentNumbers) > 0)
 						{
-							$labelContent = Mage::getModel('linksynceparcel/api')->getLabelsByConsignments(implode(',',$consignmentNumbers),$chargeCodes[0]);
+							$labelContent = Mage::getModel('linksynceparcel/api')->getLabelsByInternationalConsignments(implode(',',$consignmentNumbers),$chargeCodes[0]);
 							if($labelContent)
 							{
-								$filename = 'bulk-consignments-label.pdf';
+								$filename = 'bulk-consignments-customdocs.pdf';
 								$filepath = Mage::getBaseDir().DS.'media'.DS.'linksync'.DS.'label'.DS.'consignment'.DS.$filename;
 								$handle = fopen($filepath,'wb');
 								fwrite($handle, $labelContent);
 								fclose($handle);
 								$labelLink = Mage::helper('linksynceparcel')->getConsignmentLabelUrl();
-								$success = Mage::helper('linksynceparcel')->__('Label is generated. <a href="%s" target="_blank" style="color:blue; font-weight:bold; font-size:14px; text-decoration:underline">Please click here to view it.</a>',$labelLink.$filename.'?'.time());
+								$success = Mage::helper('linksynceparcel')->__('Documents is generated. <a href="%s" target="_blank" style="color:blue; font-weight:bold; font-size:14px; text-decoration:underline">Please click here to view it.</a>',$labelLink.$filename.'?'.time());
 								Mage::getSingleton('adminhtml/session')->addSuccess($success);
 								/*Mage::app()->getFrontController()->getResponse()->setRedirect($labelLink.$filename)->sendResponse();
 								$this->_redirectUrl($labelLink.$filename);
@@ -263,7 +386,7 @@ class Linksync_Linksynceparcel_Adminhtml_ConsignmentController extends Mage_Admi
 							}
 							else
 							{
-								$error = Mage::helper('linksynceparcel')->__('Failed to generate label');
+								$error = Mage::helper('linksynceparcel')->__('Failed to generate documents');
 								Mage::getSingleton('adminhtml/session')->addError($error);
 							}
 						}
@@ -273,11 +396,11 @@ class Linksync_Linksynceparcel_Adminhtml_ConsignmentController extends Mage_Admi
 							Mage::getSingleton('adminhtml/session')->addError($error);
 						}
 					} else {
-						$error = Mage::helper('linksynceparcel')->__('You can only print multiple consignment labels for the same Delivery Type - they must be all Express Post or all eParcel Standard.');
+						$error = Mage::helper('linksynceparcel')->__('Your request can not be completed - Documents are only associated with international consignments.');
 						Mage::getSingleton('adminhtml/session')->addError($error);
 					}
 				} else {
-					$error = Mage::helper('linksynceparcel')->__('At this time linksync does not support bulk label creation for international consignments.');
+					$error = Mage::helper('linksynceparcel')->__('Your request can not be completed - Documents are only associated with international consignments.');
 					Mage::getSingleton('adminhtml/session')->addError($error);
 				}
             } 
@@ -487,30 +610,61 @@ class Linksync_Linksynceparcel_Adminhtml_ConsignmentController extends Mage_Admi
 				$success = 0;
 				
 				$data = $this->getRequest()->getParams();
+				$data['partial_delivery_allowed'] = Mage::getStoreConfig('carriers/linksynceparcel/partial_delivery_allowed');
 				if($data['partial_delivery_allowed'] == 2)
 				{
 					$data['partial_delivery_allowed'] = 0;
 				}
+				$data['delivery_signature_allowed'] = Mage::getStoreConfig('carriers/linksynceparcel/signature_required');
 				if($data['delivery_signature_allowed'] == 2)
 				{
 					$data['delivery_signature_allowed'] = 0;
 				}
+				$data['transit_cover_required'] = Mage::getStoreConfig('carriers/linksynceparcel/insurance');
 				if($data['transit_cover_required'] == 2)
 				{
 					$data['transit_cover_required'] = 0;
 				}
+				$data['print_return_labels'] = Mage::getStoreConfig('carriers/linksynceparcel/print_return_labels');
 				if($data['print_return_labels'] == 2)
 				{
 					$data['print_return_labels'] = 0;
 				}
+				$data['email_notification'] = Mage::getStoreConfig('carriers/linksynceparcel/post_email_notification');
 				if($data['email_notification'] == 2)
 				{
 					$data['email_notification'] = 0;
 				}
+				$data['notify_customers'] = Mage::getStoreConfig('carriers/linksynceparcel/notify_customers');
 				if($data['notify_customers'] == 2)
 				{
 					$data['notify_customers'] = 0;
 				}
+				
+				//Include defaults option
+				$data['delivery_instruction'] = '';
+				$data['safe_drop'] = Mage::getStoreConfig('carriers/linksynceparcel/safe_drop');
+				$data['transit_cover_amount'] = Mage::getStoreConfig('carriers/linksynceparcel/default_insurance_value');
+				$data['insurance'] = Mage::getStoreConfig('carriers/linksynceparcel/int_insurance');
+				$data['order_value_insurance'] = Mage::getStoreConfig('carriers/linksynceparcel/order_value_insured_value');
+				$data['insurance_value'] = Mage::getStoreConfig('carriers/linksynceparcel/default_int_insurance_value');
+				$data['export_declaration_number'] = '';
+				$data['has_commercial_value'] = Mage::getStoreConfig('carriers/linksynceparcel/has_commercial_value');
+				$data['product_classification'] = Mage::getStoreConfig('carriers/linksynceparcel/default_product_classification');
+				if($data['has_commercial_value'] == 1) {
+					$data['product_classification'] = 991;
+				}
+				$data['product_classification_text'] = '';
+				if($data['product_classification']==991){
+					$data['product_classification_text'] = Mage::getStoreConfig('carriers/linksynceparcel/classification_explanation');
+				}
+				$data['country_origin'] = Mage::getStoreConfig('carriers/linksynceparcel/default_country_origin');
+				$data['hs_tariff'] = Mage::getStoreConfig('carriers/linksynceparcel/default_has_tariff');
+				$data['contents'] = Mage::getStoreConfig('carriers/linksynceparcel/default_contents');
+				$data['contains_dangerous_goods'] = 0;
+				$data['declared_value'] = Mage::getStoreConfig('carriers/linksynceparcel/order_value_declared_value');
+				$data['maximum_declared_value'] = Mage::getStoreConfig('carriers/linksynceparcel/maximum_declared_value');
+				$data['fixed_declared_value'] = Mage::getStoreConfig('carriers/linksynceparcel/fixed_declared_value');
 				
                 foreach ($ids as $id) 
 				{
@@ -519,10 +673,10 @@ class Linksync_Linksynceparcel_Adminhtml_ConsignmentController extends Mage_Admi
 					$order = Mage::getModel('sales/order')->load($orderId);
 					$incrementId = $order->getIncrementId();
 					$address = $order->getShippingAddress();
-					$country = $order->getCountry();
-					$validateInt = Mage::helper('linksynceparcel')->validateInternationalConsignment($data, $order);
-					if($country != 'AU' && $validate != false) {
-						$errors = implode('<br>', $validate);
+					$country = $address->getCountry();
+					$validateInt = Mage::helper('linksynceparcel')->validateInternationalConsignment($data, $order, $country);
+					if($country != 'AU' && $validateInt != false) {
+						$errors = implode('<br>', $validateInt);
 						Mage::getSingleton('adminhtml/session')->addError($errors);
 					} else {
 						if(!$order->getIsAddressValid() && $country == 'AU')

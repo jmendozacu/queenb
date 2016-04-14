@@ -7,7 +7,7 @@
             <select id="linksynceparcel_shipping_option" name="linksynceparcel_shipping_option" style="padding:3px" >
             	<option value="">Please select</option>
                 <?php
-                $options = Mage::helper('linksynceparcel')->getEparcelShippingOptions($this->getOrder()->getShippingMethod(),$this->getOrder()->getShippingDescription());
+                $options = Mage::helper('linksynceparcel')->getEparcelShippingOptions($this->getOrder()->getShippingMethod(),$this->getOrder()->getShippingDescription(),$this->getOrder()->getId());
                 foreach($options as $method => $option)
                 {
                     ?>
