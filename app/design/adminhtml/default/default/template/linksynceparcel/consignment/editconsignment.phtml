@@ -93,6 +93,10 @@
 			<h3>Consignment Fields</h3>
 			<table width="100%" border="0" cellspacing="6" cellpadding="6" class="tablecustom">
 			  <tr>
+				<td><?php echo Mage::helper('sales')->__('Delivery instructions') ?></td>
+				<td><textarea name="delivery_instruction" maxlength="256" cols="40" rows="4"><?php echo $consignment['delivery_instruction']; ?></textarea></td>
+			  </tr>
+			  <tr>
 				<td width="20%"><?php echo Mage::helper('sales')->__('Partial Delivery allowed?') ?></td>
 				<td>
                 <?php if(Mage::helper('linksynceparcel')->isDisablePartialDeliveryMethod($_order->getId())): ?>
@@ -123,6 +127,13 @@
 				</select></td>
 			  </tr>
 			  <tr>
+				<td><?php echo Mage::helper('sales')->__('Safe Drop?') ?></td>
+				<td><select id="safe_drop" name="safe_drop" style="width:140px">
+					<option value="1" <?php echo ($consignment['safe_drop']==1?'selected':'')?>>Yes</option>
+					<option value="0" <?php echo ($consignment['safe_drop']!=1?'selected':'')?>>No</option>
+				</select></td>
+			  </tr>
+			  <tr>
 				<td><?php echo Mage::helper('sales')->__('Transit cover required?') ?></td>
 				<td><select id="transit_cover_required" name="transit_cover_required">
 					<option value="1" <?php echo ($article['is_transit_cover_required']=='Y'?'selected':'')?>>Yes</option>
@@ -138,13 +149,6 @@
 				<td><select id="contains_dangerous_goods" name="contains_dangerous_goods">
 					<option value="1" <?php echo ($consignment['contains_dangerous_goods']==1?'selected':'')?>>Yes</option>
 					<option value="0" <?php echo ($consignment['contains_dangerous_goods']!=1?'selected':'')?>>No</option>
-				</select></td>
-			  </tr>
-			  <tr>
-				<td><?php echo Mage::helper('sales')->__('Print return labels?') ?></td>
-				<td><select id="print_return_labels" name="print_return_labels">
-					<option value="1" <?php echo ($consignment['print_return_labels']==1?'selected':'')?>>Yes</option>
-					<option value="0" <?php echo ($consignment['print_return_labels']!=1?'selected':'')?>>No</option>
 				</select></td>
 			  </tr>
               <tr>

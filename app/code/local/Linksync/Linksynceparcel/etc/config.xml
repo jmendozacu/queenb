@@ -2,7 +2,7 @@
 <config>
 	<modules>
 		<Linksync_Linksynceparcel>
-			<version>0.9.1</version>
+			<version>1.1.1 Beta 7</version>
 		</Linksync_Linksynceparcel>
 	</modules>
 	<frontend>
@@ -228,10 +228,6 @@
 									<title>Settings</title>
 									<sort_order>4</sort_order>
 									<children>
-										<freeshipping module="linksynceparcel">
-											<title>Freeshipping Rules</title>
-											<sort_order>4</sort_order>
-										</freeshipping>
 										<preset module="linksynceparcel">
 											<title>Article Presets</title>
 											<sort_order>5</sort_order>
@@ -284,11 +280,6 @@
 						<title>Settings</title>
 						<sort_order>4</sort_order>
 						<children>
-							<freeshipping module="linksynceparcel">
-								<title>Freeshipping Rules</title>
-								<sort_order>4</sort_order>
-								<action>linksynceparcel/adminhtml_freeshipping</action>
-							</freeshipping>
 							<preset module="linksynceparcel">
 								<title>Article Presets</title>
 								<depends>
@@ -318,7 +309,6 @@
             <linksynceparcel>
                 <active>1</active>
                 <model>linksynceparcel/carrier_linksynceparcel</model>
-                <title>Australia Post eParcel Shipping</title>
 				<operation_mode>2</operation_mode>
 				<sallowspecific>1</sallowspecific>
                 <specificcountry>AU</specificcountry>
@@ -343,6 +333,27 @@
 				<display_choosen_status>0</display_choosen_status>
 				<product_unit>kgs</product_unit>
 				<copy_order_notes>0</copy_order_notes>
+				<int_insurance>1</int_insurance>
+				<default_int_insurance_value>1</default_int_insurance_value>
+				<order_value_declared_value>1</order_value_declared_value>
+				<has_commercial_value>1</has_commercial_value>
+				<default_product_classification>991</default_product_classification>
+				<classification_explanation>Merchandise</classification_explanation>
+				<default_contents>Merchandise</default_contents>
+				<parcel_post_left_offset>0</parcel_post_left_offset>
+				<parcel_post_top_offset>0</parcel_post_top_offset>
+				<express_post_left_offset>0</express_post_left_offset>
+				<express_post_top_offset>0</express_post_top_offset>
+				<int_economy_air_left_offset>0</int_economy_air_left_offset>
+				<int_economy_air_top_offset>0</int_economy_air_top_offset>
+				<int_express_courier_left_offset>0</int_express_courier_left_offset>
+				<int_express_courier_top_offset>0</int_express_courier_top_offset>
+				<int_express_post_left_offset>0</int_express_post_left_offset>
+				<int_express_post_top_offset>0</int_express_post_top_offset>
+				<int_pack_track_left_offset>0</int_pack_track_left_offset>
+				<int_pack_track_top_offset>0</int_pack_track_top_offset>
+				<int_registered_left_offset>0</int_registered_left_offset>
+				<int_registered_top_offset>0</int_registered_top_offset>
             </linksynceparcel>
         </carriers>
     </default>

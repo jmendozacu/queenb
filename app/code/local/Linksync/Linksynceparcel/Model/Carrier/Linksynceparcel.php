@@ -27,7 +27,7 @@ class Linksync_Linksynceparcel_Model_Carrier_Linksynceparcel extends Mage_Shippi
 			$request->setConditionName($this->getConfigData('condition_name') ? $this->getConfigData('condition_name') : $this->_default_condition_name);
 		}
 		
-		if(!$request->getDestPostcode())
+		/*if(!$request->getDestPostcode())
 		{
 			$error = Mage::getModel("shipping/rate_result_error");
 			$error->setCarrier('linksynceparcel');
@@ -35,7 +35,7 @@ class Linksync_Linksynceparcel_Model_Carrier_Linksynceparcel extends Mage_Shippi
 			$error->setErrorMessage('Please enter delivery address postal code to view available shipping methods');
 			return $error;
 		}
-
+*/
 		$result = Mage::getModel('shipping/rate_result');
 			
 		$rates = $this->getRate($request);

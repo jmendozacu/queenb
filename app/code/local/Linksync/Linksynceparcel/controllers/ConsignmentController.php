@@ -106,10 +106,11 @@ class Linksync_Linksynceparcel_ConsignmentController extends Mage_Adminhtml_Cont
     {
 		$data = $this->getRequest()->getParams();
 		$consignmentNumber = $data['consignment_number'];
+		$chargecode = Mage::helper('linksynceparcel')->getOrderChargeCode($this->getOrder()->getId(), $consignmentNumber);
 
 		try
 		{
-			$labelContent = Mage::getModel('linksynceparcel/api')->getLabelsByConsignments($consignmentNumber);
+			$labelContent = Mage::getModel('linksynceparcel/api')->getLabelsByConsignments($consignmentNumber,$chargecode);
 
 			if($labelContent)
 			{
@@ -259,7 +260,7 @@ class Linksync_Linksynceparcel_ConsignmentController extends Mage_Adminhtml_Cont
 				$content = $articleData['content'];
 				$chargeCode = $articleData['charge_code'];
 				$total_weight = $articleData['total_weight'];
-				$consignmentData = Mage::getModel('linksynceparcel/api')->modifyConsignment($content,$consignmentNumber);
+				$consignmentData = Mage::getModel('linksynceparcel/api')->modifyConsignment($content,$consignmentNumber,$chargeCode);
 				if($consignmentData)
 				{
 					$consignmentNumber = $consignmentData->consignmentNumber;
@@ -291,62 +292,78 @@ class Linksync_Linksynceparcel_ConsignmentController extends Mage_Adminhtml_Cont
     public function saveAction()
     {
 		$order_id = $this->getOrder()->getId();
+		$address = $this->getOrder()->getShippingAddress();
+		$country = $address->getCountry();
+		if($country != 'AU') {
+			$this->getRequest()->setParam('number_of_articles', 1);
+		}
 		$number_of_articles = (int)trim($this->getRequest()->getParam('number_of_articles'));
 		$data = $this->getRequest()->getParams();
 		
 		$tempCanConsignments = (int)($number_of_articles/20);
 		$canConsignments = $tempCanConsignments;
 		$remainArticles = $number_of_articles % 20;
-		if( $remainArticles > 0)
-		{
-			$canConsignments++;
-		}
 		
-		for($i=0;$i<$canConsignments;$i++)
-		{
-			$data['start_index'] = ($i * 20 ) + 1;
-			if( ($i+1) <= $tempCanConsignments)
+		$validate = Mage::helper('linksynceparcel')->validateInternationalConsignment($data, $this->getOrder(), $country);
+		if($validate != false) {
+			$errors = implode('<br>', $validate);
+			$this->_getSession()->addError($errors);
+		} else {
+			if( $remainArticles > 0)
 			{
-				$data['end_index'] = ($i * 20 ) + 20;
-			}
-			else
-			{
-				$data['end_index'] = ($i * 20 ) + $remainArticles;
+				$canConsignments++;
 			}
 			
-			try
+			for($i=0;$i<$canConsignments;$i++)
 			{
-				$articleData = Mage::helper('linksynceparcel')->prepareArticleData($data, $this->getOrder());
-				$content = $articleData['content'];
-				$chargeCode = $articleData['charge_code'];
-				$consignmentData = Mage::getModel('linksynceparcel/api')->createConsignment($content);
-				$total_weight = $articleData['total_weight'];
-				if($consignmentData)
+				$data['start_index'] = ($i * 20 ) + 1;
+				if( ($i+1) <= $tempCanConsignments)
 				{
-					$consignmentNumber = $consignmentData->consignmentNumber;
-					$manifestNumber = $consignmentData->manifestNumber;
-					Mage::helper('linksynceparcel')->insertConsignment($order_id,$consignmentNumber,$data,$manifestNumber,$chargeCode,$total_weight);
-					Mage::helper('linksynceparcel')->updateArticles($order_id,$consignmentNumber,$consignmentData->articles,$data,$content);
-					Mage::helper('linksynceparcel')->insertManifest($manifestNumber);
-			
-					Mage::helper('linksynceparcel')->labelCreate($consignmentNumber);
-					if($data['print_return_labels'])
-					{
-						Mage::helper('linksynceparcel')->returnLabelCreate($consignmentNumber);
-					}
-				
-					$this->_getSession()->addSuccess($this->__('The consignment has been created successfully.'));
+					$data['end_index'] = ($i * 20 ) + 20;
 				}
 				else
 				{
-					throw new Exception("createConsignment returned empty result");
+					$data['end_index'] = ($i * 20 ) + $remainArticles;
 				}
-			}
-			catch(Exception $e)
-			{
-				$error = $this->__('Cannot create consignment, Error: ').$e->getMessage();
-				$this->_getSession()->addError($error);
-				Mage::log($error, null, 'linksync_eparcel.log', true);
+				
+				try
+				{
+					$articleData = Mage::helper('linksynceparcel')->prepareArticleData($data, $this->getOrder());
+					$content = $articleData['content'];
+					$chargeCode = $articleData['charge_code'];
+					$consignmentData = Mage::getModel('linksynceparcel/api')->createConsignment($content,0,$chargeCode);
+					$total_weight = $articleData['total_weight'];
+					if($consignmentData)
+					{
+						$consignmentNumber = $consignmentData->consignmentNumber;
+						$manifestNumber = $consignmentData->manifestNumber;
+						Mage::helper('linksynceparcel')->insertConsignment($order_id,$consignmentNumber,$data,$manifestNumber,$chargeCode,$total_weight,$country);
+						Mage::helper('linksynceparcel')->updateArticles($order_id,$consignmentNumber,$consignmentData->articles,$data,$content);
+						Mage::helper('linksynceparcel')->insertManifest($manifestNumber);
+				
+						if($country == 'AU') {
+							$labelContent = $consignmentData->lpsLabels->labels->label;
+							Mage::helper('linksynceparcel')->generateDocument($consignmentNumber,$labelContent,'label');
+						} else {
+							$labelContent = $consignmentData->lpsLabels->labels->label;
+							$docsContent = $consignmentData->lpsLabels->labels->customDocs;
+							Mage::helper('linksynceparcel')->generateDocument($consignmentNumber,$labelContent,'label');
+							Mage::helper('linksynceparcel')->generateDocument($consignmentNumber,$docsContent,'customdocs');
+						}
+					
+						$this->_getSession()->addSuccess($this->__('The consignment has been created successfully.'));
+					}
+					else
+					{
+						throw new Exception("createConsignment returned empty result");
+					}
+				}
+				catch(Exception $e)
+				{
+					$error = $this->__('Cannot create consignment, Error: ').$e->getMessage();
+					$this->_getSession()->addError($error);
+					Mage::log($error, null, 'linksync_eparcel.log', true);
+				}
 			}
 		}
 		$this->_redirect("adminhtml/sales_order/view", array('order_id' => $order_id,'active_tab' => 'linksync_eparcel'));
@@ -355,63 +372,79 @@ class Linksync_Linksynceparcel_ConsignmentController extends Mage_Adminhtml_Cont
 	public function saveOrderWeightAction()
     {
 		$order_id = $this->getOrder()->getId();
+		$address = $this->getOrder()->getShippingAddress();
+		$country = $address->getCountry();
+		if($country != 'AU') {
+			$this->getRequest()->setParam('number_of_articles', 1);
+		}
 		$number_of_articles = (int)trim($this->getRequest()->getParam('number_of_articles'));
 		$data = $this->getRequest()->getParams();
 		
 		$tempCanConsignments = (int)($number_of_articles/20);
 		$canConsignments = $tempCanConsignments;
 		$remainArticles = $number_of_articles % 20;
-		if( $remainArticles > 0)
-		{
-			$canConsignments++;
-		}
 		
-		for($i=0;$i<$canConsignments;$i++)
-		{
-			$data['start_index'] = ($i * 20 ) + 1;
-			if( ($i+1) <= $tempCanConsignments)
+		$validate = Mage::helper('linksynceparcel')->validateInternationalConsignment($data, $this->getOrder(), $country);
+		if($validate != false) {
+			$errors = implode('<br>', $validate);
+			$this->_getSession()->addError($errors);
+		} else {
+			if( $remainArticles > 0)
 			{
-				$data['end_index'] = ($i * 20 ) + 20;
-			}
-			else
-			{
-				$data['end_index'] = ($i * 20 ) + $remainArticles;
+				$canConsignments++;
 			}
 			
-			try
+			for($i=0;$i<$canConsignments;$i++)
 			{
-				$articleData = Mage::helper('linksynceparcel')->prepareOrderWeightArticleData($data, $this->getOrder());
-				$content = $articleData['content'];
-				$chargeCode = $articleData['charge_code'];
-				$total_weight = $articleData['total_weight'];
-				$consignmentData = Mage::getModel('linksynceparcel/api')->createConsignment($content);
-
-				if($consignmentData)
+				$data['start_index'] = ($i * 20 ) + 1;
+				if( ($i+1) <= $tempCanConsignments)
 				{
-					$consignmentNumber = $consignmentData->consignmentNumber;
-					$manifestNumber = $consignmentData->manifestNumber;
-					Mage::helper('linksynceparcel')->insertConsignment($order_id,$consignmentNumber,$data,$manifestNumber,$chargeCode,$total_weight);
-					Mage::helper('linksynceparcel')->updateArticles($order_id,$consignmentNumber,$consignmentData->articles,$data,$content);
-					Mage::helper('linksynceparcel')->insertManifest($manifestNumber);
-			
-					Mage::helper('linksynceparcel')->labelCreate($consignmentNumber);
-					if($data['print_return_labels'])
-					{
-						Mage::helper('linksynceparcel')->returnLabelCreate($consignmentNumber);
-					}
-				
-					$this->_getSession()->addSuccess($this->__('The consignment has been created successfully.'));
+					$data['end_index'] = ($i * 20 ) + 20;
 				}
 				else
 				{
-					throw new Exception("createConsignment returned empty result");
+					$data['end_index'] = ($i * 20 ) + $remainArticles;
 				}
-			}
-			catch(Exception $e)
-			{
-				$error = $this->__('Cannot create consignment, Error: ').$e->getMessage();
-				$this->_getSession()->addError($error);
-				Mage::log($error, null, 'linksync_eparcel.log', true);
+				
+				try
+				{
+					$articleData = Mage::helper('linksynceparcel')->prepareOrderWeightArticleData($data, $this->getOrder());
+					$content = $articleData['content'];
+					$chargeCode = $articleData['charge_code'];
+					$total_weight = $articleData['total_weight'];
+					$consignmentData = Mage::getModel('linksynceparcel/api')->createConsignment($content,0,$chargeCode);
+
+					if($consignmentData)
+					{
+						$consignmentNumber = $consignmentData->consignmentNumber;
+						$manifestNumber = $consignmentData->manifestNumber;
+						Mage::helper('linksynceparcel')->insertConsignment($order_id,$consignmentNumber,$data,$manifestNumber,$chargeCode,$total_weight,$country);
+						Mage::helper('linksynceparcel')->updateArticles($order_id,$consignmentNumber,$consignmentData->articles,$data,$content);
+						Mage::helper('linksynceparcel')->insertManifest($manifestNumber);
+				
+						if($country == 'AU') {
+							$labelContent = $consignmentData->lpsLabels->labels->label;
+							Mage::helper('linksynceparcel')->generateDocument($consignmentNumber,$labelContent,'label');
+						} else {
+							$labelContent = $consignmentData->lpsLabels->labels->label;
+							$docsContent = $consignmentData->lpsLabels->labels->customDocs;
+							Mage::helper('linksynceparcel')->generateDocument($consignmentNumber,$labelContent,'label');
+							Mage::helper('linksynceparcel')->generateDocument($consignmentNumber,$docsContent,'customdocs');
+						}
+						
+						$this->_getSession()->addSuccess($this->__('The consignment has been created successfully.'));
+					}
+					else
+					{
+						throw new Exception("createConsignment returned empty result");
+					}
+				}
+				catch(Exception $e)
+				{
+					$error = $this->__('Cannot create consignment, Error: ').$e->getMessage();
+					$this->_getSession()->addError($error);
+					Mage::log($error, null, 'linksync_eparcel.log', true);
+				}
 			}
 		}
 		$this->_redirect("adminhtml/sales_order/view", array('order_id' => $order_id,'active_tab' => 'linksync_eparcel'));
@@ -420,63 +453,79 @@ class Linksync_Linksynceparcel_ConsignmentController extends Mage_Adminhtml_Cont
 	public function saveDefaultWeightAction()
     {
 		$order_id = $this->getOrder()->getId();
+		$address = $this->getOrder()->getShippingAddress();
+		$country = $address->getCountry();
+		if($country != 'AU') {
+			$this->getRequest()->setParam('number_of_articles', 1);
+		}
 		$number_of_articles = (int)trim($this->getRequest()->getParam('number_of_articles'));
 		$data = $this->getRequest()->getParams();
 		
 		$tempCanConsignments = (int)($number_of_articles/20);
 		$canConsignments = $tempCanConsignments;
 		$remainArticles = $number_of_articles % 20;
-		if( $remainArticles > 0)
-		{
-			$canConsignments++;
-		}
 		
-		for($i=0;$i<$canConsignments;$i++)
-		{
-			$data['start_index'] = ($i * 20 ) + 1;
-			if( ($i+1) <= $tempCanConsignments)
+		$validate = Mage::helper('linksynceparcel')->validateInternationalConsignment($data, $this->getOrder(), $country);
+		if($validate != false) {
+			$errors = implode('<br>', $validate);
+			$this->_getSession()->addError($errors);
+		} else {
+			if( $remainArticles > 0)
 			{
-				$data['end_index'] = ($i * 20 ) + 20;
-			}
-			else
-			{
-				$data['end_index'] = ($i * 20 ) + $remainArticles;
+				$canConsignments++;
 			}
 			
-			try
+			for($i=0;$i<$canConsignments;$i++)
 			{
-				$articleData = Mage::helper('linksynceparcel')->prepareOrderWeightArticleData($data, $this->getOrder());
-				$content = $articleData['content'];
-				$chargeCode = $articleData['charge_code'];
-				$total_weight = $articleData['total_weight'];
-				$consignmentData = Mage::getModel('linksynceparcel/api')->createConsignment($content);
-
-				if($consignmentData)
+				$data['start_index'] = ($i * 20 ) + 1;
+				if( ($i+1) <= $tempCanConsignments)
 				{
-					$consignmentNumber = $consignmentData->consignmentNumber;
-					$manifestNumber = $consignmentData->manifestNumber;
-					Mage::helper('linksynceparcel')->insertConsignment($order_id,$consignmentNumber,$data,$manifestNumber,$chargeCode,$total_weight);
-					Mage::helper('linksynceparcel')->updateArticles($order_id,$consignmentNumber,$consignmentData->articles,$data,$content);
-					Mage::helper('linksynceparcel')->insertManifest($manifestNumber);
-			
-					Mage::helper('linksynceparcel')->labelCreate($consignmentNumber);
-					if($data['print_return_labels'])
-					{
-						Mage::helper('linksynceparcel')->returnLabelCreate($consignmentNumber);
-					}
-				
-					$this->_getSession()->addSuccess($this->__('The consignment has been created successfully.'));
+					$data['end_index'] = ($i * 20 ) + 20;
 				}
 				else
 				{
-					throw new Exception("createConsignment returned empty result");
+					$data['end_index'] = ($i * 20 ) + $remainArticles;
 				}
-			}
-			catch(Exception $e)
-			{
-				$error = $this->__('Cannot create consignment, Error: ').$e->getMessage();
-				$this->_getSession()->addError($error);
-				Mage::log($error, null, 'linksync_eparcel.log', true);
+				
+				try
+				{
+					$articleData = Mage::helper('linksynceparcel')->prepareOrderWeightArticleData($data, $this->getOrder());
+					$content = $articleData['content'];
+					$chargeCode = $articleData['charge_code'];
+					$total_weight = $articleData['total_weight'];
+					$consignmentData = Mage::getModel('linksynceparcel/api')->createConsignment($content,0,$chargeCode);
+
+					if($consignmentData)
+					{
+						$consignmentNumber = $consignmentData->consignmentNumber;
+						$manifestNumber = $consignmentData->manifestNumber;
+						Mage::helper('linksynceparcel')->insertConsignment($order_id,$consignmentNumber,$data,$manifestNumber,$chargeCode,$total_weight,$country);
+						Mage::helper('linksynceparcel')->updateArticles($order_id,$consignmentNumber,$consignmentData->articles,$data,$content);
+						Mage::helper('linksynceparcel')->insertManifest($manifestNumber);
+				
+						if($country == 'AU') {
+							$labelContent = $consignmentData->lpsLabels->labels->label;
+							Mage::helper('linksynceparcel')->generateDocument($consignmentNumber,$labelContent,'label');
+						} else {
+							$labelContent = $consignmentData->lpsLabels->labels->label;
+							$docsContent = $consignmentData->lpsLabels->labels->customDocs;
+							Mage::helper('linksynceparcel')->generateDocument($consignmentNumber,$labelContent,'label');
+							Mage::helper('linksynceparcel')->generateDocument($consignmentNumber,$docsContent,'customdocs');
+						}
+					
+						$this->_getSession()->addSuccess($this->__('The consignment has been created successfully.'));
+					}
+					else
+					{
+						throw new Exception("createConsignment returned empty result");
+					}
+				}
+				catch(Exception $e)
+				{
+					$error = $this->__('Cannot create consignment, Error: ').$e->getMessage();
+					$this->_getSession()->addError($error);
+					Mage::log($error, null, 'linksync_eparcel.log', true);
+				}
 			}
 		}
 		$this->_redirect("adminhtml/sales_order/view", array('order_id' => $order_id,'active_tab' => 'linksync_eparcel'));
@@ -497,7 +546,7 @@ class Linksync_Linksynceparcel_ConsignmentController extends Mage_Adminhtml_Cont
 			$content = $articleData['content'];
 			$chargeCode = $articleData['charge_code'];
 			$total_weight = $articleData['total_weight'];
-			$consignmentData = Mage::getModel('linksynceparcel/api')->modifyConsignment($content,$data['consignment_number']);
+			$consignmentData = Mage::getModel('linksynceparcel/api')->modifyConsignment($content,$data['consignment_number'],$chargeCode);
 			if($consignmentData)
 			{
 				$consignmentNumber = $consignmentData->consignmentNumber;
@@ -506,6 +555,10 @@ class Linksync_Linksynceparcel_ConsignmentController extends Mage_Adminhtml_Cont
 				Mage::helper('linksynceparcel')->updateArticles($order_id,$consignmentNumber,$consignmentData->articles,$data,$content);
 				Mage::helper('linksynceparcel')->insertManifest($manifestNumber);
 				Mage::helper('linksynceparcel')->removeConsignmentLabels($consignmentNumber);
+				
+				$labelContent = $consignmentData->lpsLabels->labels->label;
+				Mage::helper('linksynceparcel')->generateDocument($consignmentNumber,$labelContent,'label');
+				
 				$this->_getSession()->addSuccess($this->__('%s: consignment has been updated successfully.',$data['consignment_number']));
 				$this->_redirect("adminhtml/sales_order/view", array('order_id' => $order_id,'active_tab' => 'linksync_eparcel'));
 			}
@@ -530,7 +583,7 @@ class Linksync_Linksynceparcel_ConsignmentController extends Mage_Adminhtml_Cont
 			$content = $articleData['content'];
 			$chargeCode = $articleData['charge_code'];
 			$total_weight = $articleData['total_weight'];
-			$consignmentData = Mage::getModel('linksynceparcel/api')->modifyConsignment($content,$data['consignment_number']);
+			$consignmentData = Mage::getModel('linksynceparcel/api')->modifyConsignment($content,$data['consignment_number'],$chargeCode);
 			if($consignmentData)
 			{
 				$consignmentNumber = $consignmentData->consignmentNumber;
@@ -539,11 +592,9 @@ class Linksync_Linksynceparcel_ConsignmentController extends Mage_Adminhtml_Cont
 				Mage::helper('linksynceparcel')->updateArticles($order_id,$consignmentNumber,$consignmentData->articles,$data,$content);
 				Mage::helper('linksynceparcel')->insertManifest($manifestNumber);
 
-				Mage::helper('linksynceparcel')->labelCreate($consignmentNumber);
-				if($data['print_return_labels'])
-				{
-					Mage::helper('linksynceparcel')->returnLabelCreate($consignmentNumber);
-				}
+				$labelContent = $consignmentData->lpsLabels->labels->label;
+				Mage::helper('linksynceparcel')->generateDocument($consignmentNumber,$labelContent,'label');
+				
 				$this->_getSession()->addSuccess($this->__('The article and consignment has been updated successfully.'));
 				$this->_redirect("adminhtml/sales_order/view", array('order_id' => $order_id,'active_tab' => 'linksync_eparcel'));
 			}
@@ -568,7 +619,7 @@ class Linksync_Linksynceparcel_ConsignmentController extends Mage_Adminhtml_Cont
 			$content = $articleData['content'];
 			$chargeCode = $articleData['charge_code'];
 			$total_weight = $articleData['total_weight'];
-			$consignmentData = Mage::getModel('linksynceparcel/api')->modifyConsignment($content,$data['consignment_number']);
+			$consignmentData = Mage::getModel('linksynceparcel/api')->modifyConsignment($content,$data['consignment_number'],$chargeCode);
 			if($consignmentData)
 			{
 				$consignmentNumber = $consignmentData->consignmentNumber;

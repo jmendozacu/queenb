@@ -1,10 +1,6 @@
 <?php
-if(!defined('LINKSYNC_EPARCEL_URL1'))
-	define('LINKSYNC_EPARCEL_URL1','ws1.linksync.com');
-if(!defined('LINKSYNC_URL2'))
-	define('LINKSYNC_URL2','ws2.linksync.com');
-if(!defined('LINKSYNC_WSDL'))
-	define('LINKSYNC_WSDL','/linksync/linksyncService');
+if(!defined('LINKSYNC_EPARCEL_URL'))
+	define('LINKSYNC_EPARCEL_URL','https://api.linksync.com/linksync/linksyncService');
 if(!defined('LINKSYNC_DEBUG'))
 	define('LINKSYNC_DEBUG',1);
 class Linksync_Linksynceparcel_Model_Api extends Mage_Core_Model_Abstract
@@ -15,31 +11,36 @@ class Linksync_Linksynceparcel_Model_Api extends Mage_Core_Model_Abstract
 		{
 			if(is_object($address))
 			{
-				$city = $address->getCity();
-				$state = Mage::helper('linksynceparcel')->getRegion($address->getRegionId());
-				$postcode = $address->getPostcode();
-				
-				if(LINKSYNC_DEBUG == 1)
-				{
-					$client = new SoapClient($this->getWebserviceUrl(true).'?WSDL',array('trace'=>1));
-				}
-				else
-				{
-					$client = new SoapClient($this->getWebserviceUrl(true).'?WSDL');
-				}
-				
-				$laid = trim(Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/laid'));
-				$addressParams = array('suburb' => trim($city), 'postcode' => trim($postcode), 'stateCode' => trim($state));
-				
-				$stdClass = $client->isAddressValid($laid,$addressParams); 
-
-				if($stdClass)
-				{
+				$country = $address->getCountry();
+				if($country == 'AU') {
+					$city = $address->getCity();
+					$state = Mage::helper('linksynceparcel')->getRegion($address->getRegionId());
+					$postcode = $address->getPostcode();
+					
 					if(LINKSYNC_DEBUG == 1)
 					{
-						Mage::log('isAddressValid Request: '.$client->__getLastRequest(), null, 'linksync_eparcel.log', true);
-						Mage::log('isAddressValid Response: '.$client->__getLastResponse(), null, 'linksync_eparcel.log', true);
+						$client = new SoapClient($this->getWebserviceUrl(true).'?WSDL',array('trace'=>1));
 					}
+					else
+					{
+						$client = new SoapClient($this->getWebserviceUrl(true).'?WSDL');
+					}
+					
+					$laid = trim(Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/laid'));
+					$addressParams = array('suburb' => trim($city), 'postcode' => trim($postcode), 'stateCode' => trim($state));
+					
+					$stdClass = $client->isAddressValid($laid,$addressParams); 
+
+					if($stdClass)
+					{
+						if(LINKSYNC_DEBUG == 1)
+						{
+							Mage::log('isAddressValid Request: '.$client->__getLastRequest(), null, 'linksync_eparcel.log', true);
+							Mage::log('isAddressValid Response: '.$client->__getLastResponse(), null, 'linksync_eparcel.log', true);
+						}
+						return 1;
+					}
+				} else {
 					return 1;
 				}
 			}
@@ -57,21 +58,10 @@ class Linksync_Linksynceparcel_Model_Api extends Mage_Core_Model_Abstract
 	
 	public function getWebserviceUrl($next = false)
 	{
-		$url = 'https://';
-		
-		if($next)
-		{
-			$url .= LINKSYNC_EPARCEL_URL1;
-		}
-		else
-		{
-			$url .= LINKSYNC_URL2;
-		}
-		$url .= LINKSYNC_WSDL;
-		return $url;
+		return LINKSYNC_EPARCEL_URL;
 	}
 	
-	public function createConsignment($article,$loop=0)
+	public function createConsignment($article,$loop=0,$chargeCode=false)
 	{
 		if($loop < 2)
 		{
@@ -90,13 +80,24 @@ class Linksync_Linksynceparcel_Model_Api extends Mage_Core_Model_Abstract
 				
 				$laid = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/laid');
 				
-				$stdClass = $client->createConsignment2($laid,$article); 
+				$chargeCodeData = Mage::helper('linksynceparcel')->getChargeCodes();
+				$codeData = $chargeCodeData[$chargeCode];
+				$service = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/'. $codeData['key']);
+				$labelType = explode('_', $service);
+				$arg3 = $labelType[0];
+				$arg4 = ($labelType[1]==0)?'false':'true';
+				$arg5 = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/'. $codeData['key'] .'_left_offset');
+				$arg6 = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/'. $codeData['key'] .'_top_offset');
+				
+				$site_url = Mage::helper('linksynceparcel')->getSiteUrl(true);
+				
+				$stdClass = $client->createConsignment2($laid,$article,$site_url,$arg3,$arg4,$arg5,$arg6); 
 	
 				if($stdClass)
 				{
 					if(LINKSYNC_DEBUG == 1)
 					{
-						//Mage::log('createConsignment Request: '.$client->__getLastRequest(), null, 'linksync_eparcel.log', true);
+						Mage::log('createConsignment Request: '.$client->__getLastRequest(), null, 'linksync_eparcel.log', true);
 						Mage::log('createConsignment Response: '.$client->__getLastResponse(), null, 'linksync_eparcel.log', true);
 					}
 					return $stdClass;
@@ -115,7 +116,7 @@ class Linksync_Linksynceparcel_Model_Api extends Mage_Core_Model_Abstract
 		}
 	}
 	
-	public function modifyConsignment($article,$consignmentNumber)
+	public function modifyConsignment($article,$consignmentNumber,$chargeCode)
 	{
 		try
 		{
@@ -131,8 +132,18 @@ class Linksync_Linksynceparcel_Model_Api extends Mage_Core_Model_Abstract
 			Mage::log('Modified Articles: '.preg_replace('/\s+/', ' ', trim($article)), null, 'linksync_eparcel.log', true);
 			
 			$laid = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/laid');
+			$site_url = Mage::helper('linksynceparcel')->getSiteUrl(true);
 			
-			$stdClass = $client->modifyConsignment2($laid,$consignmentNumber,$article);
+			$chargeCodeData = Mage::helper('linksynceparcel')->getChargeCodes();
+			$codeData = $chargeCodeData[$chargeCode];
+			$service = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/'. $codeData['key']);
+			$labelType = explode('_', $service);
+			$arg3 = $labelType[0];
+			$arg4 = ($labelType[1]==0)?'false':'true';
+			$arg5 = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/'. $codeData['key'] .'_left_offset');
+			$arg6 = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/'. $codeData['key'] .'_top_offset');
+			
+			$stdClass = $client->modifyConsignment2($laid,$consignmentNumber,$article,$site_url,$arg3,$arg4,$arg5,$arg6);
 
 			if($stdClass)
 			{
@@ -217,8 +228,9 @@ class Linksync_Linksynceparcel_Model_Api extends Mage_Core_Model_Abstract
 			}
 			
 			$laid = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/laid');
+			$site_url = Mage::helper('linksynceparcel')->getSiteUrl(true);
 			
-			$stdClass = $client->deleteConsignment($laid,$consignmentNumber);
+			$stdClass = $client->deleteConsignment($laid,$consignmentNumber,$site_url);
 
 			if($stdClass)
 			{
@@ -319,15 +331,17 @@ class Linksync_Linksynceparcel_Model_Api extends Mage_Core_Model_Abstract
 				$operation_mode = 'live';
 			}
 			
-			$label_logo = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/label_logo');
-			$logoPath = Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB);
-			$logoPath .= 'media/linksync/';
-			$label_logo = @file_get_contents($logoPath.$label_logo);
+			$label_logo = '';
 
 			$merchant_id = trim(Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/merchant_id'));
 			$lodgement_facility = trim(Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/lodgement_facility'));
 			
-			$stdClass = $client->seteParcelMerchantDetails($laid,$merchant_location_id, $post_charge_to_account,$sftp_username,$sftp_password, $operation_mode, '', $merchant_id, $lodgement_facility, $label_logo ); 
+			$lps_username = trim(Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/lps_username'));
+			$lps_password = trim(Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/lps_password'));
+			
+			$site_url = Mage::helper('linksynceparcel')->getSiteUrl(true);
+			
+			$stdClass = $client->seteParcelMerchantDetails($laid,$merchant_location_id, $post_charge_to_account,$sftp_username,$sftp_password, $operation_mode, '', $merchant_id, $lodgement_facility, $label_logo,$lps_username,$lps_password,$site_url ); 
 
 			if($stdClass)
 			{
@@ -380,6 +394,10 @@ class Linksync_Linksynceparcel_Model_Api extends Mage_Core_Model_Abstract
 			$returnAddress['returnPostcode'] = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_postcode'));
 			$returnAddress['returnStateCode'] = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_statecode'));
 			$returnAddress['returnSuburb'] = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_suburb'));
+			
+			$returnAddress['returnCompanyName'] = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_business_name'));
+			$returnAddress['returnEmailAddress'] = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_email_address'));
+			$returnAddress['returnPhoneNumber'] = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_phone_number'));
 			
 			$laid = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/laid');
 			
@@ -587,7 +605,7 @@ class Linksync_Linksynceparcel_Model_Api extends Mage_Core_Model_Abstract
 		}
 	}
 	
-	public function getLabelsByConsignments($consignments)
+	public function getLabelsByConsignments($consignments,$chargeCode)
 	{
 		try
 		{
@@ -601,9 +619,16 @@ class Linksync_Linksynceparcel_Model_Api extends Mage_Core_Model_Abstract
 			}
 			
 			$laid = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/laid');
-			$labelType = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/label_format');
+			$chargeCodeData = Mage::helper('linksynceparcel')->getChargeCodes();
+			$codeData = $chargeCodeData[$chargeCode];
+			$service = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/'. $codeData['key']);
+			$labelType = explode('_', $service);
+			$arg3 = $labelType[0];
+			$arg4 = ($labelType[1]==0)?'false':'true';
+			$arg5 = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/'. $codeData['key'] .'_left_offset');
+			$arg6 = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/'. $codeData['key'] .'_top_offset');
 			
-			$stdClass = $client->getLabelsByConsignments($laid,explode(',',$consignments),$labelType); 
+			$stdClass = $client->getLabelsByConsignments($laid,explode(',',$consignments),$arg3,$arg4,$arg5,$arg6); 
 
 			if($stdClass)
 			{
@@ -691,8 +716,9 @@ class Linksync_Linksynceparcel_Model_Api extends Mage_Core_Model_Abstract
 			}
 			
 			$laid = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/laid');
+			$site_url = Mage::helper('linksynceparcel')->getSiteUrl(true);
 			
-			$stdClass = $client->despatchManifest($laid); 
+			$stdClass = $client->despatchManifest($laid,$site_url); 
 
 			if($stdClass)
 			{

@@ -407,7 +407,7 @@ class Linksync_Linksynceparcel_Model_Mysql4_Carrier_Linksynceparcel extends Mage
 	protected function isValidChargeCode($chargeCode)
 	{
 		$chargeCodes = Mage::helper('linksynceparcel')->getChargeCodes();
-		return in_array($chargeCode, $chargeCodes);
+		return array_key_exists($chargeCode, $chargeCodes);
 	}
 
 }

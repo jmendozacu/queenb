@@ -76,6 +76,13 @@ class Linksync_Linksynceparcel_Block_Adminhtml_Search_Grid extends Mage_Adminhtm
             'sortable' => true
         ));
 		
+		$this->addColumn('country', array(
+            'header' => Mage::helper('linksynceparcel')->__('Country'),
+            'align' => 'center',
+            'index' => 'country_id',
+            'sortable' => true
+        ));
+		
 		$this->addColumn('total_consignment_weight', array(
           'header'    => Mage::helper('linksynceparcel')->__('Weight'),
           'align'     =>'center',
@@ -126,6 +133,15 @@ class Linksync_Linksynceparcel_Block_Adminhtml_Search_Grid extends Mage_Adminhtm
 		  'sortable'  => false,
 		  'filter'	  => false,
 		  'renderer'  => 'Linksync_Linksynceparcel_Block_Adminhtml_Renderer_Search_Labelprint'
+      ));
+	  
+	  $this->addColumn('customdocs', array(
+          'header'    => Mage::helper('linksynceparcel')->__('Documents'),
+          'align'     =>'center',
+          'index'     => 'customdocs',
+		  'sortable'  => false,
+		  'filter'	  => false,
+		  'renderer'  => 'Linksync_Linksynceparcel_Block_Adminhtml_Renderer_Search_Customdocsprint'
       ));
 	  
 	  $this->addColumn('track_url', array(

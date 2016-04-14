@@ -4,33 +4,16 @@ class Linksync_Linksynceparcel_Block_Adminhtml_Renderer_Consignment_Shippingmeth
 {
     public function render(Varien_Object $row)
 	{
-		$shipping_method =  $row->getData('shipping_method');
-		$shipping_method = explode('_',$shipping_method);
-		$charge_code = $shipping_method[1];
-		
+		$value =  $row->getData('order_consignment');
+		$values = explode('_',$value);
+		$orderId = $values[0];
+		$order = Mage::getModel('sales/order')->load($orderId);
+		$chargeCode = $row->getData('general_linksynceparcel_shipping_chargecode');
+		if(!$chargeCode) {
+			$chargeCode = Mage::helper('linksynceparcel')->getChargeCode($order);
+		}
 		$method =  $row->getData('shipping_description');
-		
-		if($shipping_method[0] == 'linksynceparcel')
-		{
-			$title = Mage::getStoreConfig('carriers/linksynceparcel/title');
-			$method = str_replace($title,'',$method);
-			$method = str_replace(' - ','',$method);
-		}
-		
-		$display = $method.' - '.$charge_code;
-		
-		if($shipping_method[0] != 'linksynceparcel')
-		{
-			$charge_code = $row->getData('general_linksynceparcel_shipping_chargecode');
-			if(!empty($charge_code))
-			{
-				$display = $method.' - '.$charge_code;
-			}
-			else
-			{
-				$display = $method;
-			}
-		}
+		$display = $method.' - '.$chargeCode;
 		return $display;
 	}
 }

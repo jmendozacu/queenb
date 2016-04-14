@@ -22,7 +22,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 	    $writeConnection = $resource->getConnection('core_write');
 	    $table = $resource->getTableName('linksync_linksynceparcel_authority');
 
-		$query = "INSERT {$table} SET order_id = '{$order_id}', instructions='".mysql_escape_string($note)."'";
+		$query = "INSERT {$table} SET order_id = '{$order_id}', instructions='". $note ."'";
 		return $writeConnection->query($query);
 	}
 	
@@ -296,146 +296,234 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		
 		$template = file_get_contents($this->getTemplatePath().DS.'article-return-address-template.xml');
 		return str_replace($search, $replace, $template);
-	}
-
+	}	
+	
 	public function prepareArticleData($data,$order,$consignment_number='')
 	{
 		$deliveryAddress  = $order->getShippingAddress()->getData();
-		$returnAddress = $this->prepareReturnAddress();
-		$deliveryInfo = $this->prepareDeliveryAddress($deliveryAddress,$order);
-		$articlesInfo = $this->prepareArticles($data, $order);
-		
-		$search = array(
-			'[[articles]]',
-			'[[RETURN-ADDRESS]]',
-			'[[DELIVERY-ADDRESS]]',
-			'[[CUSTOMER-EMAIL]]',
-			'[[DELIVERY-SIGNATURE]]',
-			'[[ORDER-ID]]',
-			'[[CHARGE-CODE]]',
-			'[[SHIPMENT-ID]]',
-			'[[DANGER-GOODS]]',
-			'[[printReturnLabels]]',
-			'[[deliverPartConsignment]]',
-			'[[cashToCollect]]',
-  			'[[cashToCollectAmount]]',
-			'[[emailNotification]]'
-		);
-
 		$chargeCode = $this->getChargeCode($order,$consignment_number);
+		$shipAddress = $order->getShippingAddress();
+		$country = $shipAddress->getCountry();
+		$total_weight = 0;
+		if($country != 'AU') {
+			$returnInternationalAddress = $this->prepareInternationalReturnAddress();
+			$deliveryInternationalInfo = $this->prepareInternationalDeliveryAddress($deliveryAddress,$order,$data,$country);
+			$articlesInternationalInfo = $this->prepareInternationalArticles($data, $order);
+			$total_weight = $articlesInternationalInfo['total_weight'];
 			
-		$replace = array(
-			$articlesInfo['info'],
-			$returnAddress,
-			$deliveryInfo,
-			$order->getCustomerEmail(),
-			($data['delivery_signature_allowed'] ? 'true' : 'false'),
-			$this->getIncrementId($order),
-			$chargeCode,
-			$order->getId(),
-			($data['contains_dangerous_goods'] ? 'true' : 'false'),
-			($data['print_return_labels'] ? 'true' : 'false'),
-			($data['partial_delivery_allowed'] ? 'Y' : 'N'),
-			(isset($data['cash_to_collect']) ? '<cashToCollect>Y</cashToCollect>' : '<cashToCollect>N</cashToCollect>'),
-			(isset($data['cash_to_collect']) ? '<cashToCollectAmount>'.number_format($data['cash_to_collect'],2).'</cashToCollectAmount>' : ''),
-			($data['email_notification'] ? 'Y' : 'N')
-		);
-		$template = file_get_contents($this->getTemplatePath().DS.'articles-template.xml');
+			$search = array(
+				'[[articles]]',
+				'[[DELIVERY-ADDRESS]]',
+				'[[RETURN-ADDRESS]]',
+				'[[ORDER-ID]]',
+				'[[CHARGE-CODE]]'
+			);
+			
+			$replace = array(
+				$articlesInternationalInfo['info'],
+				$deliveryInternationalInfo,
+				$returnInternationalAddress,
+				$this->getIncrementId($order),
+				$chargeCode
+			);
+			$template = file_get_contents($this->getTemplatePath().DS.'international-articles-template.xml');
+		} else {
+			$returnAddress = $this->prepareReturnAddress();
+			$deliveryInfo = $this->prepareDeliveryAddress($deliveryAddress,$order,$data);
+			$articlesInfo = $this->prepareArticles($data, $order);
+			$total_weight = $articlesInfo['total_weight'];
+			
+			$search = array(
+				'[[articles]]',
+				'[[RETURN-ADDRESS]]',
+				'[[DELIVERY-ADDRESS]]',
+				'[[CUSTOMER-EMAIL]]',
+				'[[DELIVERY-SIGNATURE]]',
+				'[[ORDER-ID]]',
+				'[[CHARGE-CODE]]',
+				'[[SHIPMENT-ID]]',
+				'[[DANGER-GOODS]]',
+				'[[printReturnLabels]]',
+				'[[deliverPartConsignment]]',
+				'[[cashToCollect]]',
+				'[[cashToCollectAmount]]',
+				'[[emailNotification]]',
+				'[[safeDrop]]'
+			);
+
+				
+			$replace = array(
+				$articlesInfo['info'],
+				$returnAddress,
+				$deliveryInfo,
+				$order->getCustomerEmail(),
+				($data['delivery_signature_allowed'] ? 'true' : 'false'),
+				$this->getIncrementId($order),
+				$chargeCode,
+				$order->getId(),
+				($data['contains_dangerous_goods'] ? 'true' : 'false'),
+				($data['print_return_labels'] ? 'true' : 'false'),
+				($data['partial_delivery_allowed'] ? 'Y' : 'N'),
+				(isset($data['cash_to_collect']) ? '<cashToCollect>Y</cashToCollect>' : '<cashToCollect>N</cashToCollect>'),
+				(isset($data['cash_to_collect']) ? '<cashToCollectAmount>'.number_format($data['cash_to_collect'],2).'</cashToCollectAmount>' : ''),
+				($data['email_notification'] ? 'Y' : 'N'),
+				($data['safe_drop']==1 ? 'yes' : 'no')
+			);
+			$template = file_get_contents($this->getTemplatePath().DS.'articles-template.xml');
+		}
+		
 		$articleData = str_replace($search, $replace, $template);
-		return array('content' => $articleData, 'charge_code' => $chargeCode, 'total_weight' => $articlesInfo['total_weight']);
+		return array('content' => $articleData, 'charge_code' => $chargeCode, 'total_weight' => $total_weight);
 	}
 	
 	public function prepareOrderWeightArticleData($data,$order,$consignment_number='')
 	{
 		$deliveryAddress  = $order->getShippingAddress()->getData();
-		$returnAddress = $this->prepareReturnAddress();
-		$deliveryInfo = $this->prepareDeliveryAddress($deliveryAddress,$order);
-		$articlesInfo = $this->prepareOrderWeightArticles($data, $order);
 		
-		$search = array(
-			'[[articles]]',
-			'[[RETURN-ADDRESS]]',
-			'[[DELIVERY-ADDRESS]]',
-			'[[CUSTOMER-EMAIL]]',
-			'[[DELIVERY-SIGNATURE]]',
-			'[[ORDER-ID]]',
-			'[[CHARGE-CODE]]',
-			'[[SHIPMENT-ID]]',
-			'[[DANGER-GOODS]]',
-			'[[printReturnLabels]]',
-			'[[deliverPartConsignment]]',
-			'[[cashToCollect]]',
-  			'[[cashToCollectAmount]]',
-			'[[emailNotification]]'
-		);
-
 		$chargeCode = $this->getChargeCode($order,$consignment_number);
+		$shipAddress = $order->getShippingAddress();
+		$country = $shipAddress->getCountry();
+		$total_weight = 0;
+		if($country != 'AU') {
+			$returnInternationalAddress = $this->prepareInternationalReturnAddress();
+			$deliveryInternationalInfo = $this->prepareInternationalDeliveryAddress($deliveryAddress,$order,$data,$country);
+			$articlesInternationalInfo = $this->prepareInternationalOrderWeightArticles($data, $order);
+			$total_weight = $articlesInternationalInfo['total_weight'];
 			
-		$replace = array(
-			$articlesInfo['info'],
-			$returnAddress,
-			$deliveryInfo,
-			$order->getCustomerEmail(),
-			($data['delivery_signature_allowed'] ? 'true' : 'false'),
-			$this->getIncrementId($order),
-			$chargeCode,
-			$order->getId(),
-			($data['contains_dangerous_goods'] ? 'true' : 'false'),
-			($data['print_return_labels'] ? 'true' : 'false'),
-			($data['partial_delivery_allowed'] ? 'Y' : 'N'),
-			(isset($data['cash_to_collect']) ? '<cashToCollect>Y</cashToCollect>' : '<cashToCollect>N</cashToCollect>'),
-			(isset($data['cash_to_collect']) ? '<cashToCollectAmount>'.number_format($data['cash_to_collect'],2).'</cashToCollectAmount>' : ''),
-			($data['email_notification'] ? 'Y' : 'N')
-		);
-		$template = file_get_contents($this->getTemplatePath().DS.'articles-template.xml');
+			$search = array(
+				'[[articles]]',
+				'[[DELIVERY-ADDRESS]]',
+				'[[RETURN-ADDRESS]]',
+				'[[ORDER-ID]]',
+				'[[CHARGE-CODE]]'
+			);
+			
+			$replace = array(
+				$articlesInternationalInfo['info'],
+				$deliveryInternationalInfo,
+				$returnInternationalAddress,
+				$this->getIncrementId($order),
+				$chargeCode
+			);
+			$template = file_get_contents($this->getTemplatePath().DS.'international-articles-template.xml');
+		} else {
+			$returnAddress = $this->prepareReturnAddress();
+			$deliveryInfo = $this->prepareDeliveryAddress($deliveryAddress,$order,$data);
+			$articlesInfo = $this->prepareOrderWeightArticles($data, $order);
+			$total_weight = $articlesInfo['total_weight'];
+			
+			$search = array(
+				'[[articles]]',
+				'[[RETURN-ADDRESS]]',
+				'[[DELIVERY-ADDRESS]]',
+				'[[CUSTOMER-EMAIL]]',
+				'[[DELIVERY-SIGNATURE]]',
+				'[[ORDER-ID]]',
+				'[[CHARGE-CODE]]',
+				'[[SHIPMENT-ID]]',
+				'[[DANGER-GOODS]]',
+				'[[printReturnLabels]]',
+				'[[deliverPartConsignment]]',
+				'[[cashToCollect]]',
+				'[[cashToCollectAmount]]',
+				'[[emailNotification]]'
+			);
+
+			$replace = array(
+				$articlesInfo['info'],
+				$returnAddress,
+				$deliveryInfo,
+				$order->getCustomerEmail(),
+				($data['delivery_signature_allowed'] ? 'true' : 'false'),
+				$this->getIncrementId($order),
+				$chargeCode,
+				$order->getId(),
+				($data['contains_dangerous_goods'] ? 'true' : 'false'),
+				($data['print_return_labels'] ? 'true' : 'false'),
+				($data['partial_delivery_allowed'] ? 'Y' : 'N'),
+				(isset($data['cash_to_collect']) ? '<cashToCollect>Y</cashToCollect>' : '<cashToCollect>N</cashToCollect>'),
+				(isset($data['cash_to_collect']) ? '<cashToCollectAmount>'.number_format($data['cash_to_collect'],2).'</cashToCollectAmount>' : ''),
+				($data['email_notification'] ? 'Y' : 'N')
+			);
+			$template = file_get_contents($this->getTemplatePath().DS.'articles-template.xml');
+		}
 		$articleData = str_replace($search, $replace, $template);
-		return array('content' => $articleData, 'charge_code' => $chargeCode, 'total_weight' => $articlesInfo['total_weight']);
+		return array('content' => $articleData, 'charge_code' => $chargeCode, 'total_weight' => $total_weight);
 	}
 	
 	public function prepareArticleDataBulk($data,$order)
 	{
 		$deliveryAddress  = $order->getShippingAddress()->getData();
-		$returnAddress = $this->prepareReturnAddress();
-		$deliveryInfo = $this->prepareDeliveryAddress($deliveryAddress,$order);
-		$articlesInfo = $this->prepareArticlesBulk($data, $order);
 		
-		$search = array(
-			'[[articles]]',
-			'[[RETURN-ADDRESS]]',
-			'[[DELIVERY-ADDRESS]]',
-			'[[CUSTOMER-EMAIL]]',
-			'[[DELIVERY-SIGNATURE]]',
-			'[[ORDER-ID]]',
-			'[[CHARGE-CODE]]',
-			'[[SHIPMENT-ID]]',
-			'[[DANGER-GOODS]]',
-			'[[printReturnLabels]]',
-			'[[deliverPartConsignment]]',
-			'[[cashToCollect]]',
-  			'[[cashToCollectAmount]]',
-			'[[emailNotification]]'
-		);
-
 		$chargeCode = $this->getChargeCode($order);
-		$replace = array(
-			$articlesInfo['info'],
-			$returnAddress,
-			$deliveryInfo,
-			$order->getCustomerEmail(),
-			($data['delivery_signature_allowed'] ? 'true' : 'false'),
-			$this->getIncrementId($order),
-			$chargeCode,
-			$order->getId(),
-			($data['contains_dangerous_goods'] ? 'true' : 'false'),
-			($data['print_return_labels'] ? 'true' : 'false'),
-			($data['partial_delivery_allowed'] ? 'Y' : 'N'),
-			(isset($data['cash_to_collect']) ? '<cashToCollect>Y</cashToCollect>' : '<cashToCollect>N</cashToCollect>'),
-			(isset($data['cash_to_collect']) ? '<cashToCollectAmount>'.number_format($data['cash_to_collect'],2).'</cashToCollectAmount>' : ''),
-			($data['email_notification'] ? 'Y' : 'N')
-		);
-		$template = file_get_contents($this->getTemplatePath().DS.'articles-template.xml');
+		$shipAddress = $order->getShippingAddress();
+		$country = $shipAddress->getCountry();
+		$total_weight = 0;
+		if($country != 'AU') {
+			$returnInternationalAddress = $this->prepareInternationalReturnAddress();
+			$deliveryInternationalInfo = $this->prepareInternationalDeliveryAddress($deliveryAddress,$order,$data,$country);
+			$articlesInternationalInfo = $this->prepareInternationalArticles($data, $order, true);
+			$total_weight = $articlesInternationalInfo['total_weight'];
+			
+			$search = array(
+				'[[articles]]',
+				'[[DELIVERY-ADDRESS]]',
+				'[[RETURN-ADDRESS]]',
+				'[[ORDER-ID]]',
+				'[[CHARGE-CODE]]'
+			);
+			
+			$replace = array(
+				$articlesInternationalInfo['info'],
+				$deliveryInternationalInfo,
+				$returnInternationalAddress,
+				$this->getIncrementId($order),
+				$chargeCode
+			);
+			$template = file_get_contents($this->getTemplatePath().DS.'international-articles-template.xml');
+		} else {
+			$returnAddress = $this->prepareReturnAddress();
+			$deliveryInfo = $this->prepareDeliveryAddress($deliveryAddress,$order,$data);
+			$articlesInfo = $this->prepareArticlesBulk($data, $order);
+			$total_weight = $articlesInfo['total_weight'];
+			
+			$search = array(
+				'[[articles]]',
+				'[[RETURN-ADDRESS]]',
+				'[[DELIVERY-ADDRESS]]',
+				'[[CUSTOMER-EMAIL]]',
+				'[[DELIVERY-SIGNATURE]]',
+				'[[ORDER-ID]]',
+				'[[CHARGE-CODE]]',
+				'[[SHIPMENT-ID]]',
+				'[[DANGER-GOODS]]',
+				'[[printReturnLabels]]',
+				'[[deliverPartConsignment]]',
+				'[[cashToCollect]]',
+				'[[cashToCollectAmount]]',
+				'[[emailNotification]]'
+			);
+
+			$replace = array(
+				$articlesInfo['info'],
+				$returnAddress,
+				$deliveryInfo,
+				$order->getCustomerEmail(),
+				($data['delivery_signature_allowed'] ? 'true' : 'false'),
+				$this->getIncrementId($order),
+				$chargeCode,
+				$order->getId(),
+				($data['contains_dangerous_goods'] ? 'true' : 'false'),
+				($data['print_return_labels'] ? 'true' : 'false'),
+				($data['partial_delivery_allowed'] ? 'Y' : 'N'),
+				(isset($data['cash_to_collect']) ? '<cashToCollect>Y</cashToCollect>' : '<cashToCollect>N</cashToCollect>'),
+				(isset($data['cash_to_collect']) ? '<cashToCollectAmount>'.number_format($data['cash_to_collect'],2).'</cashToCollectAmount>' : ''),
+				($data['email_notification'] ? 'Y' : 'N')
+			);
+			$template = file_get_contents($this->getTemplatePath().DS.'articles-template.xml');
+		}
 		$articleData = str_replace($search, $replace, $template);
-		return array('content' => $articleData, 'charge_code' => $chargeCode, 'total_weight' => $articlesInfo['total_weight']);
+		return array('content' => $articleData, 'charge_code' => $chargeCode, 'total_weight' => $total_weight);
 	}
 	
 	public function prepareModifiedArticleData($order,$consignment_number='')
@@ -492,7 +580,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 	{
 		$deliveryAddress  = $order->getShippingAddress()->getData();
 		$returnAddress = $this->prepareReturnAddress();
-		$deliveryInfo = $this->prepareDeliveryAddress($deliveryAddress,$order);
+		$deliveryInfo = $this->prepareDeliveryAddress($deliveryAddress,$order,$data);
 		$articlesInfo = $this->prepareUpdatedArticles($order,$data);
 		
 		$search = array(
@@ -539,7 +627,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 	{
 		$deliveryAddress  = $order->getShippingAddress()->getData();
 		$returnAddress = $this->prepareReturnAddress();
-		$deliveryInfo = $this->prepareDeliveryAddress($deliveryAddress,$order);
+		$deliveryInfo = $this->prepareDeliveryAddress($deliveryAddress,$order,$data);
 		$articlesInfo = $this->prepareAddArticles($order,$data);
 		
 		$search = array(
@@ -611,7 +699,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		return $note;
 	}
 	
-	public function prepareDeliveryAddress($address,$order)
+	public function prepareDeliveryAddress($address,$order,$data=false)
 	{
 		$street = $address['street'];
 		$street = explode("\n", $street);
@@ -649,50 +737,43 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		$email = $address['email'];
 		$phone = $address['telephone'];
 		
-		if(Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/copy_order_notes'))
-		{
-			$instructions = $this->getNotes($order);
-		}
-		else
-		{
-			$instructions = $this->getInstructions($order);
-		}
+		$instructions = $data['delivery_instruction'];
 		
 		$search = array(
-			'[[deliveryCompanyName]]',
-			'[[deliveryName]]',
-			'[[deliveryEmailAddress]]',
 			'[[deliveryAddressLine1]]',
 			'[[deliveryAddressLine2]]',
 			'[[deliveryAddressLine3]]',
 			'[[deliveryAddressLine4]]',
-			'[[deliverySuburb]]',
-			'[[deliveryStateCode]]',
-			'[[deliveryPostcode]]',
+			'[[deliveryCompanyName]]',
+			'[[deliveryEmailAddress]]',
+			'[[deliveryInstructions]]',
+			'[[deliveryName]]',
 			'[[deliveryPhoneNumber]]',
-			'[[deliveryInstructions]]'
+			'[[deliveryPostcode]]',
+			'[[deliveryStateCode]]',
+			'[[deliverySuburb]]'
 		);
 
 		$replace = array(
-			trim($company),
-			trim($this->xmlData($firstname)),
-			trim($email),
 			trim($street1),
 			trim($street2),
 			trim($street3),
 			trim($street4),
-			trim($this->xmlData($city)),
-			trim($state),
-			trim($postalCode),
+			trim($company),
+			trim($email),
+			($instructions ? '<deliveryInstructions>'.$this->xmlData(($instructions)).'</deliveryInstructions>' : '<deliveryInstructions />'),
+			trim($this->xmlData($firstname)),
 			trim($phone),
-			($instructions ? '<deliveryInstructions>'.$this->xmlData(base64_decode($instructions)).'</deliveryInstructions>' : '<deliveryInstructions />')
+			trim($postalCode),
+			trim($state),
+			trim($this->xmlData($city))
 		);
 		
 		$template = file_get_contents($this->getTemplatePath().DS.'article-delivery-address-template.xml');
 		return str_replace($search, $replace, $template);
 	}
 	
-	public function prepareArticles($data, $order,$consignment_number='')
+	public function prepareArticles($data, $order,$consignment_number='',$international=false)
 	{
 		$articlesInfo = '';
 		
@@ -758,39 +839,60 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 					$article['weight'] = $weight;
 				}
 			}
-		
-			$search = array(
-				'[[actualWeight]]',
-				'[[articleDescription]]',
-				'[[height]]',
-				'[[length]]',
-				'[[width]]',
-				'[[isTransitCoverRequired]]',
-				'[[transitCoverAmount]]',
-				'[[articleNumber]]'
-			);
-		
+			
 			$article['weight'] = number_format($article['weight'],2, '.', '');
 			$total_weight += $article['weight'];
-		
-			$replace = array(
-				$article['weight'],
-				$this->xmlData($article['description']),
-				$article['height'],
-				$article['length'],
-				'<width>'.$article['width'].'</width>',
-				($data['transit_cover_required'] ? 'Y' : 'N'),
-				($data['transit_cover_required'] ? $data['transit_cover_amount'] : 0),
-				(isset($article['article_number']) ? '<articleNumber>'.$article['article_number'].'</articleNumber>' : '')
-			);
 			
-			$template = file_get_contents($this->getTemplatePath().DS.'article-template.xml');
+			if($international) {
+				$search = array(
+					'[[articleDescription]]',
+					'[[actualWeight]]',
+					'[[width]]',
+					'[[height]]',
+					'[[length]]'
+				);
+
+				$replace = array(
+					$this->xmlData($article['description']),
+					trim($article['weight']),
+					trim($article['width']),
+					trim($article['height']),
+					trim($article['length'])
+				);
+				
+				$template = file_get_contents($this->getTemplatePath().DS.'international-article-template.xml');
+			} else {
+				$search = array(
+					'[[actualWeight]]',
+					'[[articleDescription]]',
+					'[[height]]',
+					'[[length]]',
+					'[[width]]',
+					'[[isTransitCoverRequired]]',
+					'[[transitCoverAmount]]',
+					'[[articleNumber]]'
+				);
+			
+			
+				$replace = array(
+					$article['weight'],
+					$this->xmlData($article['description']),
+					$article['height'],
+					$article['length'],
+					'<width>'.$article['width'].'</width>',
+					($data['transit_cover_required'] ? 'Y' : 'N'),
+					($data['transit_cover_required'] ? $data['transit_cover_amount'] : 0),
+					(isset($article['article_number']) ? '<articleNumber>'.$article['article_number'].'</articleNumber>' : '')
+				);
+				
+				$template = file_get_contents($this->getTemplatePath().DS.'article-template.xml');
+			}
 			$articlesInfo .= str_replace($search, $replace, $template);
 		}
 		return array('info' => $articlesInfo, 'total_weight' => $total_weight);
 	}
 	
-	public function prepareOrderWeightArticles($data, $order,$consignment_number='')
+	public function prepareOrderWeightArticles($data, $order,$consignment_number='',$isInternational=false)
 	{
 		$articlesInfo = '';
 		
@@ -807,39 +909,70 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			{
         		$article = $data['article'.$i];
 			}
+			else
+			{
+				$articles_type = $data['articles_type'];
+				$articles = explode('<=>',$articles_type);
+				
+				$article = array();
+				$article['description'] = $articles[0];
+				$article['weight'] = $articles[1];
+				$article['height'] = $articles[2];
+				$article['length'] = $articles[3];
+				$article['width'] = $articles[4];
+			}
 			
-			$search = array(
-				'[[actualWeight]]',
-				'[[articleDescription]]',
-				'[[height]]',
-				'[[length]]',
-				'[[width]]',
-				'[[isTransitCoverRequired]]',
-				'[[transitCoverAmount]]',
-				'[[articleNumber]]'
-			);
-		
 			$article['weight'] = number_format($article['weight'],2,'.', '');
 			$totalWeight += $article['weight'];
-			
-			$replace = array(
-				$article['weight'],
-				$this->xmlData($article['description']),
-				0,
-				0,
-				'<width>0</width>',
-				($data['transit_cover_required'] ? 'Y' : 'N'),
-				($data['transit_cover_required'] ? $data['transit_cover_amount'] : 0),
-				(isset($article['article_number']) ? '<articleNumber>'.$article['article_number'].'</articleNumber>' : '')
-			);
-			
-			$template = file_get_contents($this->getTemplatePath().DS.'article-template.xml');
+				
+			if($isInternational) {
+				$search = array(
+					'[[articleDescription]]',
+					'[[actualWeight]]',
+					'[[width]]',
+					'[[height]]',
+					'[[length]]'
+				);
+
+				$replace = array(
+					self::xmlData(trim($article['description'])),
+					trim($article['weight']),
+					0,
+					0,
+					0
+				);
+				
+				$template = file_get_contents($this->getTemplatePath().DS.'international-article-template.xml');
+			} else {
+				$search = array(
+					'[[actualWeight]]',
+					'[[articleDescription]]',
+					'[[height]]',
+					'[[length]]',
+					'[[width]]',
+					'[[isTransitCoverRequired]]',
+					'[[transitCoverAmount]]',
+					'[[articleNumber]]'
+				);
+				$replace = array(
+					$article['weight'],
+					$this->xmlData($article['description']),
+					0,
+					0,
+					'<width>0</width>',
+					($data['transit_cover_required'] ? 'Y' : 'N'),
+					($data['transit_cover_required'] ? $data['transit_cover_amount'] : 0),
+					(isset($article['article_number']) ? '<articleNumber>'.$article['article_number'].'</articleNumber>' : '')
+				);
+				
+				$template = file_get_contents($this->getTemplatePath().DS.'article-template.xml');
+			}
 			$articlesInfo .= str_replace($search, $replace, $template);
 		}
 		return array('info' => $articlesInfo, 'total_weight' => $totalWeight);
 	}
 	
-	public function prepareArticlesBulk($data, $order)
+	public function prepareArticlesBulk($data, $order, $international=false)
 	{
 		$total_weight = 0;
 		$articlesInfo = '';
@@ -886,32 +1019,52 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 				$article['length'] = 0;
 				$article['width'] = 0;
 				
-				$search = array(
-					'[[actualWeight]]',
-					'[[articleDescription]]',
-					'[[height]]',
-					'[[length]]',
-					'[[width]]',
-					'[[isTransitCoverRequired]]',
-					'[[transitCoverAmount]]',
-					'[[articleNumber]]'
-				);
-			
 				$article['weight'] = number_format($article['weight'],2,'.', '');
 				$total_weight += $article['weight'];
 				
-				$replace = array(
-					$article['weight'],
-					$this->xmlData($article['description']),
-					$article['height'],
-					$article['length'],
-					'<width>'.$article['width'].'</width>',
-					($data['transit_cover_required'] ? 'Y' : 'N'),
-					($data['transit_cover_required'] ? $data['transit_cover_amount'] : 0),
-					''
-				);
-				
-				$template = file_get_contents($this->getTemplatePath().DS.'article-template.xml');
+				if($international) {
+					$search = array(
+						'[[articleDescription]]',
+						'[[actualWeight]]',
+						'[[width]]',
+						'[[height]]',
+						'[[length]]'
+					);
+
+					$replace = array(
+						self::xmlData(trim($article['description'])),
+						trim($article['weight']),
+						trim($article['width']),
+						trim($article['height']),
+						trim($article['length'])
+					);
+					
+					$template = file_get_contents($this->getTemplatePath().DS.'international-article-template.xml');
+				} else {
+					$search = array(
+						'[[actualWeight]]',
+						'[[articleDescription]]',
+						'[[height]]',
+						'[[length]]',
+						'[[width]]',
+						'[[isTransitCoverRequired]]',
+						'[[transitCoverAmount]]',
+						'[[articleNumber]]'
+					);
+					
+					$replace = array(
+						$article['weight'],
+						$this->xmlData($article['description']),
+						$article['height'],
+						$article['length'],
+						'<width>'.$article['width'].'</width>',
+						($data['transit_cover_required'] ? 'Y' : 'N'),
+						($data['transit_cover_required'] ? $data['transit_cover_amount'] : 0),
+						''
+					);
+					
+					$template = file_get_contents($this->getTemplatePath().DS.'article-template.xml');
+				}
 				$articlesInfo .= str_replace($search, $replace, $template);
 			}
 		}
@@ -962,6 +1115,87 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 						$article['weight'] = $weightPerArticle;
 					}
 					
+					$article['weight'] = number_format($article['weight'],2,'.', '');
+					$total_weight += $article['weight'];
+					
+					if($international) {
+						$search = array(
+							'[[articleDescription]]',
+							'[[actualWeight]]',
+							'[[width]]',
+							'[[height]]',
+							'[[length]]'
+						);
+
+						$replace = array(
+							self::xmlData(trim($article['description'])),
+							trim($article['weight']),
+							trim($article['width']),
+							trim($article['height']),
+							trim($article['length'])
+						);
+						
+						$template = file_get_contents($this->getTemplatePath().DS.'international-article-template.xml');
+					} else {
+						
+						$search = array(
+							'[[actualWeight]]',
+							'[[articleDescription]]',
+							'[[height]]',
+							'[[length]]',
+							'[[width]]',
+							'[[isTransitCoverRequired]]',
+							'[[transitCoverAmount]]',
+							'[[articleNumber]]'
+						);
+					
+						$replace = array(
+							$article['weight'],
+							$this->xmlData($article['description']),
+							$article['height'],
+							$article['length'],
+							'<width>'.$article['width'].'</width>',
+							($data['transit_cover_required'] ? 'Y' : 'N'),
+							($data['transit_cover_required'] ? $data['transit_cover_amount'] : 0),
+							''
+						);
+						
+						$template = file_get_contents($this->getTemplatePath().DS.'article-template.xml');
+					}
+					$articlesInfo .= str_replace($search, $replace, $template);
+				}
+			}
+			else
+			{
+				$article = array();
+				$article['description'] = $articles[0];
+				$article['weight'] = $articles[1];
+				$article['height'] = $articles[2];
+				$article['length'] = $articles[3];
+				$article['width'] = $articles[4];
+				
+				$article['weight'] = number_format($article['weight'],2,'.', '');
+				$total_weight += $article['weight'];
+				
+				if($international) {
+					$search = array(
+						'[[articleDescription]]',
+						'[[actualWeight]]',
+						'[[width]]',
+						'[[height]]',
+						'[[length]]'
+					);
+
+					$replace = array(
+						self::xmlData(trim($article['description'])),
+						trim($article['weight']),
+						trim($article['width']),
+						trim($article['height']),
+						trim($article['length'])
+					);
+					
+					$template = file_get_contents($this->getTemplatePath().DS.'international-article-template.xml');
+				} else {
 					$search = array(
 						'[[actualWeight]]',
 						'[[articleDescription]]',
@@ -972,9 +1206,6 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 						'[[transitCoverAmount]]',
 						'[[articleNumber]]'
 					);
-				
-					$article['weight'] = number_format($article['weight'],2,'.', '');
-					$total_weight += $article['weight'];
 					
 					$replace = array(
 						$article['weight'],
@@ -988,44 +1219,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 					);
 					
 					$template = file_get_contents($this->getTemplatePath().DS.'article-template.xml');
-					$articlesInfo .= str_replace($search, $replace, $template);
 				}
-			}
-			else
-			{
-				$article = array();
-				$article['description'] = $articles[0];
-				$article['weight'] = $articles[1];
-				$article['height'] = $articles[2];
-				$article['length'] = $articles[3];
-				$article['width'] = $articles[4];
-				
-				$search = array(
-					'[[actualWeight]]',
-					'[[articleDescription]]',
-					'[[height]]',
-					'[[length]]',
-					'[[width]]',
-					'[[isTransitCoverRequired]]',
-					'[[transitCoverAmount]]',
-					'[[articleNumber]]'
-				);
-			
-				$article['weight'] = number_format($article['weight'],2,'.', '');
-				$total_weight += $article['weight'];
-				
-				$replace = array(
-					$article['weight'],
-					$this->xmlData($article['description']),
-					$article['height'],
-					$article['length'],
-					'<width>'.$article['width'].'</width>',
-					($data['transit_cover_required'] ? 'Y' : 'N'),
-					($data['transit_cover_required'] ? $data['transit_cover_amount'] : 0),
-					''
-				);
-				
-				$template = file_get_contents($this->getTemplatePath().DS.'article-template.xml');
 				$articlesInfo .= str_replace($search, $replace, $template);
 			}
 		}
@@ -1278,7 +1472,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		{
 			$method = $order->getShippingDescription();
 			$charge_code = $this->getNonlinksyncShippingTypeChargecode($method);
-			if(in_array($charge_code,$allowedChargeCodes))
+			if($charge_code && array_key_exists($charge_code,$allowedChargeCodes))
 			{
 				$shippingCode = 'linksynceparcel';
 			}
@@ -1398,12 +1592,12 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		$order = Mage::getModel('sales/order')->load($id_order);
 		$charge_code = $order->getShippingMethod(true)->getMethod(); 
 		$allowedChargeCodes = $this->getChargeCodes();
-	
-		if(!in_array($charge_code,$allowedChargeCodes))
+		
+		if(!array_key_exists($charge_code,$allowedChargeCodes))
 		{
 			$method = $order->getShippingDescription();
 			$charge_code = $this->getNonlinksyncShippingTypeChargecode($method);
-			if(!in_array($charge_code,$allowedChargeCodes))
+			if(!array_key_exists($charge_code,$allowedChargeCodes))
 			{
 				if(Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/apply_to_all') && Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/default_chargecode') != '')
 				{
@@ -1426,21 +1620,2985 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 	
 	public function getChargeCodes()
 	{
-		$chargeCodes1 = array(
-    	    'B1', 'B2', 'B3', 'B4', 'B5', 'B96', 'B97', 'B98', 'D1', 'DE1', 'DE2', 'DE4', 'DE5', 'DE6', 'MED1', 'MED2', 'S1', 'S10', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'SV1', 'SV2', 'W5', 'W6', 'X1', 'X2', 'X5', 'X6', 'XB1', 'XB2', 'XB3', 'XB4', 'XB5', 'XDE5', 'XW5', 'XW6', 'U1', 'U2', 'U3', 'U4', 'PR', 'XPR','XS','7D55','7J55'
-	    );
-		
-		$chargeCodes2 = array('3E03','7E03','3E05','7E05','3E33','7E33','3E35','7E35','3E53','7E53','3E55','7E55','3E83','7E83','3E85','7E85','2A33','2A35','2B33','2B35','2C33','2C35','2D33','2D35','2G33','2G35','2H33','2H35','2I33','2I35','2J33','2J35','3B03','3B05','3C03','3C05','3C33','3C35','3C53','3C55','3C83','3C85','3D03','3D05','3D33','3D35','3D53','3D55','3D83','3D85','3H03','3H05','3I03','3I05','3I33','3I35','3I53','3I55','3I83','3I85','3J03','3J05','3J33','3J35','3J53','3J55','3J83','3J85','3K03','3K05','3K33','3K35','3K53','3K55','3K83','3K85','4A33','4A35','4B33','4B35','4C33','4C35','4D33','4D35','4I33','4I35','4J33','4J35','7B03','7B05','7B33','7B35','7B53','7B55','7B83','7B85','7C03','7C05','7C33','7C35','7C53','7C55','7C83','7C85','7D03','7D05','7D33','7D35','7D53','7D55','7D83','7D85','7H03','7H05','7H33','7H35','7H53','7H55','7H83','7H85','7I03','7I05','7I33','7I35','7I53','7I55','7I83','7I85','7J03','7J05','7J33','7J35','7J53','7J55','7J83','7J85','7K03','7K05','7K33','7K35','7K53','7K55','7K83','7K85','7N33','7N35','7N83','7N85','7O33','7O35','7O83','7O85','7P33','7P35','7P83','7P85','7T33','7T35','7T83','7T85','7U33','7U35','7U83','7U85','7V33','7V35','7V83','7V85','8A33','8A35','8B33','8B35','8C33','8C35','8D33','8D35','8G33','8G35','8H33','8H35','8I33','8I35','8J33','8J35','9A33','9A35','9B33','9B35','9C33','9C35','9D33','9D35','9G33','9G35','9H33','9H35','9I33','9I35','9J33','9J35');
-		
-		$chargeCodes = array_merge($chargeCodes1,$chargeCodes2);
-		
+		$chargeCodes = array(
+			'B1' 	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'B2' 	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'B3' 	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+				
+			), 
+			'B4' 	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'B5' 	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'B96' 	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'B97' 	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'B98' 	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'D1' 	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'DE1' 	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'DE2' 	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'DE4' 	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'DE5' 	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'DE6' 	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'MED1'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'MED2'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'S1'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'S10'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'S2'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'S3'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'S4'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'S5'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'S6'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'S7'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'S8'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'S9'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'SV1'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'SV2'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'W5'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'W6'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'eParcel Standard',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 60,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'X1'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post eParcel',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 61,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			), 
+			'X2'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post eParcel',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 61,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			), 
+			'X5'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post eParcel',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 61,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			), 
+			'X6'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post eParcel',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 61,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'XB1'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post eParcel',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 61,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			), 
+			'XB2'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post eParcel',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 61,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'XB3'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post eParcel',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 61,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			), 
+			'XB4'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post eParcel',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 61,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			), 
+			'XB5'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post eParcel',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 61,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			), 
+			'XDE5'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post eParcel',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 61,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'XW5'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post eParcel',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 61,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'XW6'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post eParcel',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 61,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'Xs'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post eParcel',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 61,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3E03'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'7E03'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),  
+			'3E05'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),  
+			'7E05'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'3E33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'7E33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),  
+			'3E35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'7E35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'3E53'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'7E53'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'3E55'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),  
+			'7E55'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'3E83'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'7E83'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'3E85'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'7E85'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			), 
+			'2A33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '500g Parcel Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'2A35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '500g Parcel Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'2B33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '500g Parcel Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'2B35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '500g Parcel Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'2C33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '500g Parcel Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'2C35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '500g Parcel Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'2D33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '500g Parcel Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'2D35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '500g Parcel Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'2G33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '500g Express Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'2G35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '500g Express Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'2H33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '500g Express Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'2H35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '500g Express Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'2I33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '500g Express Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'2I35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '500g Express Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'2J33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '500g Express Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'2J35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '500g Express Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3B03'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3B05'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3C03'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3C05'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3C33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3C35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3C53'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3C55'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3C83'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3C85'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3D03'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3D05'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3D33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3D35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3D53'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3D55'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3D83'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3D85'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'3H03'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3H05'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3I03'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3I05'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3I33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3I35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3I53'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3I55'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3I83'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3I85'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3J03'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3J05'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3J33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3J35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3J53'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3J55'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3J83'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3J85'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3K03'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3K05'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3K33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3K35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3K53'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3K55'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3K83'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'3K85'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'4A33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '1kg Parcel Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'4A35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '1kg Parcel Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'4B33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '1kg Parcel Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'4B35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '1kg Parcel Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'4C33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '1kg Parcel Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'4C35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '1kg Parcel Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'4D33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '1kg Parcel Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'4D35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '1kg Parcel Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'4I33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '1kg Express Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'4I35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '1kg Express Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'4J33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '1kg Express Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'4J35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '1kg Express Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7B03'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7B05'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7B33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7B35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7B53'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7B55'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7B83'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7B85'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7C03'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7C05'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7C33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7C35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7C53'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7C55'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7C83'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7C85'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7D03'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7D05'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7D33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7D35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7D53'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7D55'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7D83'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7D85'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7H03'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7H05'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7H33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7H35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7H53'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7H55'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7H83'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7H85'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7I03'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7I05'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7I33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7I35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7I53'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7I55'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7I83'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7I85'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7J03'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7J05'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7J33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7J35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7J53'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7J55'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7J83'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7J85'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7K03'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7K05'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7K33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7K35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7K53'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7K55'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7K83'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7K85'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7N33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post Wine',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7N35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post Wine + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7N83'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post Wine',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7N85'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post Wine + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7O33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post Wine',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7O35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post Wine + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7O83'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post Wine',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7O85'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post Wine + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7P33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post Wine',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7P35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post Wine + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7P83'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post Wine',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7P85'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> 'Parcel Post Wine + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'7T33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post Wine',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7T35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post Wine + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7T83'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post Wine',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7T85'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post Wine + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7U33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post Wine',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7U35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post Wine + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7U83'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post Wine',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7U85'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post Wine + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7V33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post Wine',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7V35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post Wine + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7V83'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post Wine',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'7V85'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> 'Express Post Wine + Signature',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'8A33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '3kg Parcel Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'8A35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '3kg Parcel Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'8B33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '3kg Parcel Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'8B35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '3kg Parcel Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'8C33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '3kg Parcel Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'8C35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '3kg Parcel Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'8D33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '3kg Parcel Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'8D35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '3kg Parcel Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'8G33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '3kg Express Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'8G35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '3kg Express Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'8H33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '3kg Express Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'8H35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '3kg Express Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'8I33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '3kg Express Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'8I35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '3kg Express Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'8J33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '3kg Express Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'8J35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '3kg Express Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'9A33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '5kg Parcel Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'9A35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '5kg Parcel Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'9B33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '5kg Parcel Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'9B35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '5kg Parcel Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'9C33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '5kg Parcel Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'9C35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '5kg Parcel Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'9D33'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '5kg Parcel Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 91,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'9D35'	=> array(
+				'key'			=> 'parcel_post',
+				'name'			=> '5kg Parcel Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 93,
+				'labelType' 	=> 'Parcel Post',
+				'template' 		=> 'EPARCEL',
+				'serviceType'	=> 'standard',
+				'service'		=> 'Std.'
+			),
+			'9G33' 	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '5kg Express Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'9G35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '5kg Express Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'9H33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '5kg Express Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'9H35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '5kg Express Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'9I33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '5kg Express Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'9I35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '5kg Express Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'9J33'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '5kg Express Post Satchel',
+				'serviceCode' 	=> 9,
+				'prodCode' 		=> 87,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'9J35'	=> array(
+				'key'			=> 'express_post',
+				'name'			=> '5kg Express Post Satchel + Sig',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 96,
+				'labelType' 	=> 'Express Post',
+				'template' 		=> 'EPARCEL EXPRESS',
+				'serviceType'	=> 'express',
+				'service'		=> 'Exp.'
+			),
+			'AIR1' 	=> array(
+				'key'			=> 'int_economy_air',
+				'name'			=> 'Int. Economy Air',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Economy Air',
+				'template' 		=> 'ECONOMY AIRMAIL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'AIR2'	=> array(
+				'key'			=> 'int_economy_air',
+				'name'			=> 'Int. Economy Air',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Economy Air',
+				'template' 		=> 'ECONOMY AIRMAIL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'AIR3'	=> array(
+				'key'			=> 'int_economy_air',
+				'name'			=> 'Int. Economy Air',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Economy Air',
+				'template' 		=> 'ECONOMY AIRMAIL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'AIR4'	=> array(
+				'key'			=> 'int_economy_air',
+				'name'			=> 'Int. Economy Air',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Economy Air',
+				'template' 		=> 'ECONOMY AIRMAIL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'AIR5'	=> array(
+				'key'			=> 'int_economy_air',
+				'name'			=> 'Int. Economy Air',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Economy Air',
+				'template' 		=> 'ECONOMY AIRMAIL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'AIR6'	=> array(
+				'key'			=> 'int_economy_air',
+				'name'			=> 'Int. Economy Air',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Economy Air',
+				'template' 		=> 'ECONOMY AIRMAIL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'AIR7'	=> array(
+				'key'			=> 'int_economy_air',
+				'name'			=> 'Int. Economy Air',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Economy Air',
+				'template' 		=> 'ECONOMY AIRMAIL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'AIR8'	=> array(
+				'key'			=> 'int_economy_air',
+				'name'			=> 'Int. Economy Air',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Economy Air',
+				'template' 		=> 'ECONOMY AIRMAIL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'AIR9'	=> array(
+				'key'			=> 'int_economy_air',
+				'name'			=> 'Int. Economy Air',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Economy Air',
+				'template' 		=> 'ECONOMY AIRMAIL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECD1'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECD2'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECD3'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECD4'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECD5'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECD6'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECD7'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECD8'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECD9'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECM1'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECM2'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECM3'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECM4'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECM5'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECM6'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECM7'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECM8'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'ECM9'	=> array(
+				'key'			=> 'int_express_courier',
+				'name'			=> 'Int. Express Courier',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Courier',
+				'template' 		=> 'EXPRESS COURIER INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'EPI1'	=> array(
+				'key'			=> 'int_express_post',
+				'name'			=> 'Int. Express Post',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Post',
+				'template' 		=> 'EXPRESS POST INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'EPI2'	=> array(
+				'key'			=> 'int_express_post',
+				'name'			=> 'Int. Express Post',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Post',
+				'template' 		=> 'EXPRESS POST INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'EPI3'	=> array(
+				'key'			=> 'int_express_post',
+				'name'			=> 'Int. Express Post',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Post',
+				'template' 		=> 'EXPRESS POST INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'EPI4'	=> array(
+				'key'			=> 'int_express_post',
+				'name'			=> 'Int. Express Post',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Post',
+				'template' 		=> 'EXPRESS POST INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'EPI5'	=> array(
+				'key'			=> 'int_express_post',
+				'name'			=> 'Int. Express Post',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Post',
+				'template' 		=> 'EXPRESS POST INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'EPI6'	=> array(
+				'key'			=> 'int_express_post',
+				'name'			=> 'Int. Express Post',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Post',
+				'template' 		=> 'EXPRESS POST INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'EPI7'	=> array(
+				'key'			=> 'int_express_post',
+				'name'			=> 'Int. Express Post',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Post',
+				'template' 		=> 'EXPRESS POST INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'EPI8'	=> array(
+				'key'			=> 'int_express_post',
+				'name'			=> 'Int. Express Post',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Post',
+				'template' 		=> 'EXPRESS POST INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'EPI9'	=> array(
+				'key'			=> 'int_express_post',
+				'name'			=> 'Int. Express Post',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Express Post',
+				'template' 		=> 'EXPRESS POST INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'PTI1'	=> array(
+				'key'			=> 'int_pack_track',
+				'name'			=> 'Int. Pack & Track',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Pack & Track',
+				'template' 		=> 'PACK AND TRACK INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'PTI2'	=> array(
+				'key'			=> 'int_pack_track',
+				'name'			=> 'Int. Pack & Track',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Pack & Track',
+				'template' 		=> 'PACK AND TRACK INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'PTI3'	=> array(
+				'key'			=> 'int_pack_track',
+				'name'			=> 'Int. Pack & Track',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Pack & Track',
+				'template' 		=> 'PACK AND TRACK INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'PTI4'	=> array(
+				'key'			=> 'int_pack_track',
+				'name'			=> 'Int. Pack & Track',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Pack & Track',
+				'template' 		=> 'PACK AND TRACK INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'PTI5'	=> array(
+				'key'			=> 'int_pack_track',
+				'name'			=> 'Int. Pack & Track',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Pack & Track',
+				'template' 		=> 'PACK AND TRACK INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'PTI6'	=> array(
+				'key'			=> 'int_pack_track',
+				'name'			=> 'Int. Pack & Track',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Pack & Track',
+				'template' 		=> 'PACK AND TRACK INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'PTI7'	=> array(
+				'key'			=> 'int_pack_track',
+				'name'			=> 'Int. Pack & Track',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Pack & Track',
+				'template' 		=> 'PACK AND TRACK INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'PTI8'	=> array(
+				'key'			=> 'int_pack_track',
+				'name'			=> 'Int. Pack & Track',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Pack & Track',
+				'template' 		=> 'PACK AND TRACK INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'PTI9'	=> array(
+				'key'			=> 'int_pack_track',
+				'name'			=> 'Int. Pack & Track',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Pack & Track',
+				'template' 		=> 'PACK AND TRACK INTERNATIONAL',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'RPI1'	=> array(
+				'key'			=> 'int_registered',
+				'name'			=> 'Int. Registered',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Registered',
+				'template' 		=> 'INTERNATIONAL REGISTERED',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'RPI2'	=> array(
+				'key'			=> 'int_registered',
+				'name'			=> 'Int. Registered',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Registered',
+				'template' 		=> 'INTERNATIONAL REGISTERED',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'RPI3'	=> array(
+				'key'			=> 'int_registered',
+				'name'			=> 'Int. Registered',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Registered',
+				'template' 		=> 'INTERNATIONAL REGISTERED',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'RPI4'	=> array(
+				'key'			=> 'int_registered',
+				'name'			=> 'Int. Registered',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Registered',
+				'template' 		=> 'INTERNATIONAL REGISTERED',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'RPI5'	=> array(
+				'key'			=> 'int_registered',
+				'name'			=> 'Int. Registered',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Registered',
+				'template' 		=> 'INTERNATIONAL REGISTERED',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'RPI6'	=> array(
+				'key'			=> 'int_registered',
+				'name'			=> 'Int. Registered',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Registered',
+				'template' 		=> 'INTERNATIONAL REGISTERED',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'RPI7'	=> array(
+				'key'			=> 'int_registered',
+				'name'			=> 'Int. Registered',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Registered',
+				'template' 		=> 'INTERNATIONAL REGISTERED',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'RPI8'	=> array(
+				'key'			=> 'int_registered',
+				'name'			=> 'Int. Registered',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Registered',
+				'template' 		=> 'INTERNATIONAL REGISTERED',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			),
+			'RPI9'	=> array(
+				'key'			=> 'int_registered',
+				'name'			=> 'Int. Registered',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> 'Int. Registered',
+				'template' 		=> 'INTERNATIONAL REGISTERED',
+				'serviceType'	=> 'international',
+				'service'		=> 'Int.'
+			)
+		);
 		return $chargeCodes;
 	}
 	
 	public function getChargeCodeOptions($none=false)
 	{
 		$chargeCodes = $this->getChargeCodes();
-		sort($chargeCodes);
 		$options = array();
 		$option = array('value' => '', 'label' => 'Please Select');
 		$options[] = $option;
@@ -1449,9 +4607,9 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			$option = array('value' => 'none', 'label' => 'None');
 			$options[] = $option;
 		}
-		foreach($chargeCodes as $chargeCode)
+		foreach($chargeCodes as $chargeCode=>$chargeLabel)
 		{
-			$option = array('value' => $chargeCode, 'label' => $chargeCode);
+			$option = array('value' => $chargeCode, 'label' => $chargeCode .' - '. $chargeLabel['name']);
 			$options[] = $option;
 		}
 		return $options;
@@ -1460,16 +4618,21 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 	public function getChargeCodeValues($none=false)
 	{
 		$chargeCodes = $this->getChargeCodes();
-		sort($chargeCodes);
 		$options = array();
 		if($none)
 		{
-			$options['none'] = 'None';
+			$options['None'] = array(
+				'name'			=> 'None',
+				'serviceCode' 	=> 0,
+				'prodCode' 		=> 0,
+				'labelType' 	=> '',
+				'template' 		=> ''
+			);
 		}
 		
-		foreach($chargeCodes as $chargeCode)
+		foreach($chargeCodes as $chargeCode => $chargeLabel)
 		{
-			$options[$chargeCode] = $chargeCode;
+			$options[$chargeCode] = $chargeCode .' - '. $chargeLabel['name'];
 		}
 		return $options;
 	}
@@ -1505,7 +4668,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		return $url;
 	}
 	
-	public function insertConsignment($order_id,$consignmentNumber,$data,$manifestNumber,$chargeCode,$total_weight)
+	public function insertConsignment($order_id,$consignmentNumber,$data,$manifestNumber,$chargeCode,$total_weight,$country)
 	{
 		$resource = Mage::getSingleton('core/resource');
 	    $writeConnection = $resource->getConnection('core_write');
@@ -1514,13 +4677,45 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		$timestamp = time();
 		$date = date('Y-m-d H:i:s', $timestamp);
 		
-		$query = "INSERT {$table} SET order_id = '{$order_id}', consignment_number='{$consignmentNumber}', add_date='".$date."', delivery_signature_allowed = '".$data['delivery_signature_allowed']."', print_return_labels='".$data['print_return_labels']."', contains_dangerous_goods='".$data['contains_dangerous_goods']."', partial_delivery_allowed = '".$data['partial_delivery_allowed']."', cash_to_collect='".(isset($data['cash_to_collect'])?$data['cash_to_collect']:'')."', email_notification = '".$data['email_notification']."', notify_customers = '".$data['notify_customers']."', general_linksynceparcel_shipping_chargecode = '".$chargeCode."', weight = '".$total_weight."'";
+		$query = "INSERT {$table} SET order_id = '{$order_id}', consignment_number='{$consignmentNumber}', add_date='".$date."', delivery_signature_allowed = '".$data['delivery_signature_allowed']."', print_return_labels='".$data['print_return_labels']."', contains_dangerous_goods='".$data['contains_dangerous_goods']."', partial_delivery_allowed = '".$data['partial_delivery_allowed']."', cash_to_collect='".(isset($data['cash_to_collect'])?$data['cash_to_collect']:'')."', email_notification = '".$data['email_notification']."', notify_customers = '".$data['notify_customers']."', general_linksynceparcel_shipping_chargecode = '".$chargeCode."', weight = '".$total_weight."', delivery_country = '". $country ."', delivery_instruction = '". $data['delivery_instruction'] ."', safe_drop = '".$data['safe_drop']."'";
 		
 		$manifestNumber = trim($manifestNumber);
 		if(strtolower($manifestNumber) != 'unassinged')
 		{
 			$query .= ", manifest_number = '".$manifestNumber."', is_next_manifest = 1";
 		}
+		$writeConnection->query($query);
+		
+		if($country != "AU") {
+			$this->insertInternationalConsignment($order_id,$consignmentNumber,$data,$country);
+		}
+	}
+	
+	public function insertInternationalConsignment($order_id,$consignmentNumber,$data,$country)
+	{
+		$resource = Mage::getSingleton('core/resource');
+	    $writeConnection = $resource->getConnection('core_write');
+	    $table = $resource->getTableName('linksync_linksynceparcel_international_fields');
+		
+		$timestamp = time();
+		$date = date('Y-m-d H:i:s', $timestamp);
+		
+		$product_classification = !empty($data['product_classification'])?$data['product_classification']:Mage::getStoreConfig('carriers/linksynceparcel/default_product_classification');
+		$declared_value = !empty($data['declared_value'])?1:0;
+		$has_commercial_value = !empty($data['has_commercial_value'])?1:0;
+		$country_origin = $data['country_origin'];
+		if(!isset($country_origin)) {
+			$country_origin = Mage::getStoreConfig('carriers/linksynceparcel/default_country_origin');
+		}
+		$hs_tariff = $data['hs_tariff'];
+		if(!isset($hs_tariff)) {
+			$hs_tariff = Mage::getStoreConfig('carriers/linksynceparcel/default_has_tariff');
+		}
+		
+		$insuranceValue = (!empty($data['order_value_insurance']))?$this->getOrderProdItems($data, $order_id, true):$data['insurance_value'];
+		
+		$query = "INSERT {$table} SET order_id = '{$order_id}', consignment_number='{$consignmentNumber}', add_date='".$date."', insurance = '". $data['insurance'] ."', insurance_value = '". $insuranceValue ."', export_declaration_number='".$data['export_declaration_number']."', declared_value='". $declared_value ."', declared_value_text = '".$data['declared_value_text']."', has_commercial_value='". $has_commercial_value ."', product_classification = ". $product_classification .", product_classification_text = '".$data['product_classification_text']."', country_origin = '".$country_origin."', hs_tariff = '". $hs_tariff ."', default_contents = '". $data['contents'] ."', ship_country = '". $country ."'";
+		
 		$writeConnection->query($query);
 	}
 	
@@ -1533,7 +4728,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		$timestamp = time();
 		$date = date('Y-m-d H:i:s', $timestamp);
 		
-		$query = "UPDATE {$table} SET delivery_signature_allowed = '".$data['delivery_signature_allowed']."', print_return_labels='".$data['print_return_labels']."', contains_dangerous_goods='".$data['contains_dangerous_goods']."', partial_delivery_allowed = '".$data['partial_delivery_allowed']."', cash_to_collect='".(isset($data['cash_to_collect'])?$data['cash_to_collect']:'')."', email_notification = '".$data['email_notification']."', notify_customers = '".$data['notify_customers']."', general_linksynceparcel_shipping_chargecode = '".$chargeCode."', label = '', is_label_printed=0, is_label_created=0, weight = '".$total_weight."'";
+		$query = "UPDATE {$table} SET delivery_signature_allowed = '".$data['delivery_signature_allowed']."', print_return_labels='".$data['print_return_labels']."', contains_dangerous_goods='".$data['contains_dangerous_goods']."', partial_delivery_allowed = '".$data['partial_delivery_allowed']."', cash_to_collect='".(isset($data['cash_to_collect'])?$data['cash_to_collect']:'')."', email_notification = '".$data['email_notification']."', notify_customers = '".$data['notify_customers']."', general_linksynceparcel_shipping_chargecode = '".$chargeCode."', label = '', is_label_printed=0, is_label_created=0, weight = '".$total_weight."', delivery_country = '". $country ."', delivery_instruction = '". $data['delivery_instruction'] ."', safe_drop = '".$data['safe_drop']."'";
 		
 		$manifestNumber = trim($manifestNumber);
 		if(strtolower($manifestNumber) != 'unassinged')
@@ -1605,7 +4800,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 				$isTransitCoverRequired = ($data['transit_cover_required'] ? 'Y' : 'N');
 				$transitCoverAmount = ($data['transit_cover_required'] ? $data['transit_cover_amount'] : 0);
 				
-				$query .= "INSERT {$table} SET order_id = '{$order_id}', consignment_number='{$consignmentNumber}',  actual_weight='{$actualWeight}', article_description='".@mysql_escape_string($articleDescription)."', article_number='{$articleNumber}', cubic_weight='{$cubicWeight}', height='{$height}', width='{$width}', is_transit_cover_required='{$isTransitCoverRequired}', length='{$length}', transit_cover_amount='{$transitCoverAmount}';";
+				$query .= "INSERT {$table} SET order_id = '{$order_id}', consignment_number='{$consignmentNumber}',  actual_weight='{$actualWeight}', article_description='".$articleDescription."', article_number='{$articleNumber}', cubic_weight='{$cubicWeight}', height='{$height}', width='{$width}', is_transit_cover_required='{$isTransitCoverRequired}', length='{$length}', transit_cover_amount='{$transitCoverAmount}';";
 			}
 			$writeConnection->query($query);
 		}
@@ -1646,7 +4841,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			$isTransitCoverRequired = ($data['transit_cover_required'] ? 'Y' : 'N');
 			$transitCoverAmount = ($data['transit_cover_required'] ? $data['transit_cover_amount'] : 0);
 			
-			$query .= "INSERT {$table} SET order_id = '{$order_id}', consignment_number='{$consignmentNumber}',  actual_weight='{$actualWeight}', article_description='".@mysql_escape_string($articleDescription)."', article_number='{$articleNumber}', cubic_weight='{$cubicWeight}', height='{$height}', width='{$width}', is_transit_cover_required='{$isTransitCoverRequired}', length='{$length}', transit_cover_amount='{$transitCoverAmount}';";
+			$query .= "INSERT {$table} SET order_id = '{$order_id}', consignment_number='{$consignmentNumber}',  actual_weight='{$actualWeight}', article_description='".$articleDescription."', article_number='{$articleNumber}', cubic_weight='{$cubicWeight}', height='{$height}', width='{$width}', is_transit_cover_required='{$isTransitCoverRequired}', length='{$length}', transit_cover_amount='{$transitCoverAmount}';";
 
 			$writeConnection->query($query);
 		}
@@ -1685,7 +4880,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 					$width = $article->width;
 					$transitCoverAmount = $article->transitCoverAmount;
 					
-					$query .= "INSERT {$table} SET order_id = '{$order_id}', consignment_number='{$consignmentNumber}',  actual_weight='{$actualWeight}', article_description='".@mysql_escape_string($this->xmlData($articleDescription))."', article_number='{$articleNumber}', cubic_weight='{$cubicWeight}', height='{$height}', width='{$width}', is_transit_cover_required='{$isTransitCoverRequired}', length='{$length}', transit_cover_amount='{$transitCoverAmount}';";
+					$query .= "INSERT {$table} SET order_id = '{$order_id}', consignment_number='{$consignmentNumber}',  actual_weight='{$actualWeight}', article_description='". $this->xmlData($articleDescription) ."', article_number='{$articleNumber}', cubic_weight='{$cubicWeight}', height='{$height}', width='{$width}', is_transit_cover_required='{$isTransitCoverRequired}', length='{$length}', transit_cover_amount='{$transitCoverAmount}';";
 					
 				}
 				$writeConnection->query($query);
@@ -1748,7 +4943,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			$isTransitCoverRequired = ($data['transit_cover_required'] ? 'Y' : 'N');
 			$transitCoverAmount = ($data['transit_cover_required'] ? $data['transit_cover_amount'] : 0);
 			
-			$query .= "INSERT {$table} SET order_id = '{$order_id}', consignment_number='{$consignmentNumber}',  actual_weight='{$actualWeight}', article_description='".@mysql_escape_string($this->xmlData($articleDescription))."', article_number='{$articleNumber}', cubic_weight='{$cubicWeight}', height='{$height}', width='{$width}', is_transit_cover_required='{$isTransitCoverRequired}', length='{$length}', transit_cover_amount='{$transitCoverAmount}';";
+			$query .= "INSERT {$table} SET order_id = '{$order_id}', consignment_number='{$consignmentNumber}',  actual_weight='{$actualWeight}', article_description='". $this->xmlData($articleDescription) ."', article_number='{$articleNumber}', cubic_weight='{$cubicWeight}', height='{$height}', width='{$width}', is_transit_cover_required='{$isTransitCoverRequired}', length='{$length}', transit_cover_amount='{$transitCoverAmount}';";
 	
 			$writeConnection->query($query);
 		}
@@ -1775,7 +4970,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			$width = $article['width'];
 			$transitCoverAmount = $data['transit_cover_required'] ? $data['transit_cover_amount'] : 0 ;
 				
-			$query = "UPDATE {$table} SET  actual_weight='{$actualWeight}', article_description='".@mysql_escape_string($articleDescription)."', height='{$height}', width='{$width}', is_transit_cover_required='{$isTransitCoverRequired}', length='{$length}', transit_cover_amount='{$transitCoverAmount}' WHERE article_number='{$articleNumber}'";
+			$query = "UPDATE {$table} SET  actual_weight='{$actualWeight}', article_description='". $articleDescription ."', height='{$height}', width='{$width}', is_transit_cover_required='{$isTransitCoverRequired}', length='{$length}', transit_cover_amount='{$transitCoverAmount}' WHERE article_number='{$articleNumber}'";
 			$writeConnection->query($query);
 		}
 		catch(Exception $e)
@@ -1784,14 +4979,28 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		}
 	}
 		
-	public function getConsignments($id_order)
+	public function getConsignments($id_order,$orderdate=false)
 	{
 		$resource = Mage::getSingleton('core/resource');
 	    $readConnection = $resource->getConnection('core_read');
 	    $table = $resource->getTableName('linksync_linksynceparcel_consignment');
 
 		$query = "SELECT * FROM {$table} WHERE order_id = '{$id_order}'";
+		if($orderdate) {
+			$query .= ' ORDER BY `add_date` DESC';
+		}
 		return $readConnection->fetchAll($query);
+	}
+	
+	public function getInternatioanlConsignments($id_order,$consignment_number)
+	{
+		$resource = Mage::getSingleton('core/resource');
+	    $readConnection = $resource->getConnection('core_read');
+	    $table = $resource->getTableName('linksync_linksynceparcel_international_fields');
+
+		$query = "SELECT * FROM {$table} WHERE order_id = '{$id_order}' AND consignment_number = '". $consignment_number ."'";
+		$records = $readConnection->fetchAll($query);
+		return $records[0];
 	}
 	
 	public function getConsignment($id_order,$consignment_number)
@@ -1974,9 +5183,6 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		{
 			unlink($filepath);
 		}
-		
-		$this->labelCreate($consignmentNumber);
-		$this->returnLabelCreate($consignmentNumber);
 	}
 	
 	public function updateConsignmentTable($order_id,$consignmentNumber,$columnName, $value)
@@ -2623,7 +5829,7 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 		$resource = Mage::getSingleton('core/resource');
 	    $readConnection = $resource->getConnection('core_read');
 	    $table = $resource->getTableName('linksync_linksynceparcel_nonlinksync');
-		$query = "SELECT charge_code FROM {$table} WHERE method = '".@mysql_escape_string($method)."'";
+		$query = "SELECT charge_code FROM {$table} WHERE method = '". $method ."'";
 		return $readConnection->fetchOne($query);
 	}
 	
@@ -2784,5 +5990,526 @@ class Linksync_Linksynceparcel_Helper_Data extends Mage_Core_Helper_Abstract
 			}
 		}
 		return $selected;
+	}
+	
+	public function getSiteUrl($api=false)
+	{
+		$url = Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB);
+		if($api) {
+			$parseurl = parse_url($url);
+			$url = str_replace('www.', '', str_replace($parseurl['scheme'].'://', '', $url));
+			$url = str_replace('/', '', $url);
+		}
+		return $url;
+	}
+	
+	public function getOrderWeightTotal($orderid) 
+	{
+		$resource = Mage::getSingleton('core/resource');
+	    $readConnection = $resource->getConnection('core_read');
+	    $table = $resource->getTableName('linksync_linksynceparcel_article');
+
+		$query = "SELECT actual_weight FROM {$table} WHERE order_id = '{$orderid}'";
+		$results = $readConnection->fetchAll($query);
+		$total = 0;
+		if($results && count($results) > 0) {
+			foreach($results as $result) {
+				$total += $result['actual_weight'];
+			}
+		}
+		return $total;
+	}
+	
+	public function validateInternationalConsignment($data, $order, $country='AU')
+	{
+		$errors = array();
+		if($data['articles_type'] == 'Custom' && !empty($data['article1'])) {
+			$description = $data['article1']['description'];
+			$weight = $data['article1']['weight'];
+		} else {
+			$articles_type = $data['articles_type'];
+			$articles = explode('<=>',$articles_type);
+			$description = $articles[0];
+			$weight = $articles[1];
+		}
+		if(empty($description))
+			$errors[] = '<strong>Article Description</strong> is a required field.';
+		if(empty($weight))
+			$errors[] = '<strong>Weight (Kgs)</strong> is a required field.';
+		
+		if($country != 'AU') {
+			if((isset($data['has_commercial_value']) && $data['has_commercial_value'] == 1) || (isset($data['product_classification']) && $data['product_classification'] == 991)) {
+				if(empty($data['product_classification_text']))
+					$errors[] = '<strong>Product Classification text field</strong> is a required field.';
+			}
+			$country_origin = $data['country_origin'];
+			if(!isset($country_origin)) {
+				$country_origin = Mage::getStoreConfig('carriers/linksynceparcel/default_country_origin');
+			}
+			if(empty($country_origin))
+				$errors[] = '<strong>Country of Origin</strong> is a required field.';
+			
+			if(!empty($data['hs_tariff']))
+				if(is_numeric($data['hs_tariff'])) {
+					$count_digits = strlen($data['hs_tariff']);
+					if($count_digits < 6 || $count_digits > 12)
+						$errors[] = '<strong>HS Tariffs</strong> must be between 6 - 12 digits.';
+				} else {
+					$errors[] = '<strong>HS Tariffs</strong> must be a number.';
+				}
+			
+			$chargeCode = $this->getChargeCode($order);
+			$allowedChargeCodes = $this->getChargeCodes();
+			$chargeCodeData = $allowedChargeCodes[$chargeCode];
+			
+			if($data['articles_type'] == 'Custom' && !empty($data['article1'])) {
+				$weight = $data['article1']['weight'];
+			} else {
+				$articles_type = $data['articles_type'];
+				$articles = explode('<=>',$articles_type);
+				$weight = $articles[1];
+			}
+			
+			// All validated International Articles
+			$intArticle = array(
+				'Int. Economy Air' 	=> array('weight' => 20, 'insurance' => 5000),
+				'Int. Express Courier' => array('weight' => 20, 'insurance' => 5000),
+				'Int. Express Post' => array('weight' => 20, 'insurance' => 5000),
+				'Int. Pack & Track' => array('weight' => 2, 'insurance' => 500),
+				'Int. Registered' 	=> array('weight' => 2, 'insurance' => 5000),
+			);
+			
+			$label = $chargeCodeData['labelType'];
+			if(!empty($intArticle[$label]['weight'])){	
+				if($intArticle[$label]['weight'] < $weight) {
+					$errors[] = $chargeCodeData['name'] .' reached the maximum article weight of '. $intArticle[$label]['weight'] .'kg.';
+				}
+			}
+			
+			if($data['insurance'] == 1 && $intArticle[$label]['insurance'] < $data['insurance_value']) {
+				$errors[] = $chargeCodeData['name'] .' reached the maximum insurance value of $'. number_format($intArticle[$label]['insurance'], 2) .'.';
+			}
+		}
+		
+		if(count($errors) > 0)
+			return $errors;
+		
+		return false;
+	}
+	
+	public function prepareInternationalReturnAddress()
+	{
+		$returnAddressLine2 = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line2'));
+		if(!empty($returnAddressLine2))
+		{
+			$returnAddressLine2 = '<returnAddressLine2>'.trim($this->xmlData($returnAddressLine2)).'</returnAddressLine2>';
+		}
+		else
+		{
+			$returnAddressLine2 = '<returnAddressLine2 />';
+		}
+		
+		$returnAddressLine3 = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line3'));
+		if(!empty($returnAddressLine3))
+		{
+			$returnAddressLine3 = '<returnAddressLine3>'.trim($this->xmlData($returnAddressLine3)).'</returnAddressLine3>';
+		}
+		else
+		{
+			$returnAddressLine3 = '<returnAddressLine3 />';
+		}
+		
+		$returnAddressLine4 = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line4'));
+		if(!empty($returnAddressLine4))
+		{
+			$returnAddressLine4 = '<returnAddressLine4>'.trim($this->xmlData($returnAddressLine4)).'</returnAddressLine4>';
+		}
+		else
+		{
+			$returnAddressLine4 = '<returnAddressLine4 />';
+		}
+		
+		$search = array(
+			'[[returnAddressLine1]]',
+			'[[returnAddressLine2]]',
+			'[[returnAddressLine3]]',
+			'[[returnAddressLine4]]',
+			'[[returnName]]',
+			'[[returnPostcode]]',
+			'[[returnStateCode]]',
+			'[[returnSuburb]]',
+			'[[returnCompanyName]]',
+			'[[returnEmailAddress]]',
+			'[[returnPhoneNumber]]',
+		);
+
+		$replace = array(
+			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line1'))),
+			trim($returnAddressLine2),
+			trim($returnAddressLine3),
+			trim($returnAddressLine4),
+			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_name'))),
+			trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_postcode')),
+			trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_statecode')),
+			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_suburb'))),
+			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_business_name'))),
+			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_email_address'))),
+			trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_phone_number'))),
+		);
+		
+		$template = file_get_contents($this->getTemplatePath().DS.'international-article-return-address-template.xml');
+		return str_replace($search, $replace, $template);
+	}
+
+	public function prepareInternationalDeliveryAddress($address,$order,$data,$country)
+	{
+		$street = $address['street'];
+		$street = explode("\n", $street);
+
+		$street1 = '<deliveryAddressLine1/>';
+		$street2 = '<deliveryAddressLine2/>';
+		$street3 = '<deliveryAddressLine3/>';
+		$street4 = '<deliveryAddressLine4/>';
+		if(isset($street[0]) && !empty($street[0]))
+		{
+			$street1 = '<deliveryAddressLine1>'.$this->xmlData($street[0]).'</deliveryAddressLine1>';
+		}
+		if(isset($street[1]) && !empty($street[1]))
+		{
+			$street2 = '<deliveryAddressLine2>'.$this->xmlData($street[1]).'</deliveryAddressLine2>';
+		}
+		if(isset($street[2]) && !empty($street[2]))
+		{
+			$street3 = '<deliveryAddressLine3>'.$this->xmlData($street[2]).'</deliveryAddressLine3>';
+		}
+		if(isset($street[3]) && !empty($street[3]))
+		{
+			$street4 = '<deliveryAddressLine4>'.$this->xmlData($street[3]).'</deliveryAddressLine4>';
+		}
+		
+		$city = $address['city'];
+		if($country == 'AU') {
+			$state = 'NA';
+			if($address['region'])
+			{
+				$state = Mage::helper('linksynceparcel')->getRegion($address['region_id']);
+			}
+		} else {
+			$state = $address['region'];
+		}
+		$postalCode = $address['postcode'];
+		$company = empty($address['company']) ? '<deliveryCompanyName/>' : '<deliveryCompanyName>'.$this->xmlData($address['company']).'</deliveryCompanyName>';
+		$firstname = $address['firstname'].' '.$address['lastname'];
+		$email = $address['email'];
+		$phone = $address['telephone'];
+		
+		$instructions = $data['delivery_instruction'];
+		
+		$importerCustomsReference = '';
+		$senderCustomsReference = '';
+		
+		$search = array(
+			'[[deliveryAddressLine1]]',
+			'[[deliveryAddressLine2]]',
+			'[[deliveryAddressLine3]]',
+			'[[deliveryAddressLine4]]',
+			'[[deliveryPhoneNumber]]',
+			'[[deliveryCompanyName]]',
+			'[[deliveryCountryCode]]',
+			'[[deliveryEmailAddress]]',
+			'[[deliveryInstructions]]',
+			'[[deliveryName]]',
+			'[[deliveryPostcode]]',
+			'[[deliveryStateCode]]',
+			'[[deliverySuburb]]',
+			'[[importerCustomsReference]]',
+			'[[senderCustomsReference]]',
+		);
+
+		$replace = array(
+			trim($street1),
+			trim($street2),
+			trim($street3),
+			trim($street4),
+			trim($phone),
+			$company,
+			$country,
+			trim($email),
+			($instructions ? '<deliveryInstructions>'.$this->xmlData(($instructions)).'</deliveryInstructions>' : '<deliveryInstructions />'),
+			trim($this->xmlData($firstname)),
+			trim($postalCode),
+			trim($state),
+			trim($this->xmlData($city)),
+			(!empty($importerCustomsReference) ? '<importerCustomsReference>'. $importerCustomsReference .'<importerCustomsReference>' : '<importerCustomsReference/>' ),
+			(!empty($senderCustomsReference) ? '<senderCustomsReference>'. $senderCustomsReference .'<senderCustomsReference>' : '<senderCustomsReference/>' )
+		);
+		
+		$template = file_get_contents($this->getTemplatePath().DS.'international-article-delivery-address-template.xml');
+		return str_replace($search, $replace, $template);
+	}
+	
+	public function prepareInternationalArticles($data,$order,$bulk=false) {
+		$articlesInfo = $this->prepareArticles($data,$order,'',true);
+		if($bulk){
+			$articlesInfo = $this->prepareArticlesBulk($data, $order, true);
+		}
+		$isInsurance = $data['insurance'];
+		$insuranceOrderValue = $data['order_value_insurance'];
+		$insuranceValue = $data['insurance_value'];
+		$classificationExplanation = $data['product_classification_text'];
+		$exportDeclarationNumber = (!empty($data['export_declaration_number']) ? '<exportDeclarationNumber>'. $data['export_declaration_number'] .'</exportDeclarationNumber>' : '<exportDeclarationNumber/>');
+		$productClassification = !empty($data['product_classification'])?$data['product_classification']:991;
+		$hasCommercialValue = !empty($data['has_commercial_value'])?"true":"false";
+		$deliveryFailureDetails = $this->deliveryFailureDetails();
+		$articleContents = $this->getOrderProdItems($data, $order->getId());
+		
+		if(empty($insuranceValue)) {
+			$insuranceValue = '<insuranceValue/>';
+		} else {
+			$insuranceValue = '<insuranceValue>'. trim($insuranceValue) .'</insuranceValue>';
+		}
+		if(!empty($insuranceOrderValue))
+			$insuranceValue = '<insuranceValue>'. trim($articleContents['totalcost']) .'</insuranceValue>';
+		
+		$insuranceValue = ($isInsurance==0)? '<insuranceValue/>' : $insuranceValue;
+		
+		$search = array(
+			'[[preparedarticle]]',
+			'[[isInsuranceRequired]]',
+			'[[insuranceValue]]',
+			'[[classificationExplanation]]',
+			'[[exportDeclarationNumber]]',
+			'[[productClassification]]',
+			'[[hasCommercialValue]]',
+			'[[deliveryFailureDetails]]',
+			'[[contents]]'
+		);
+
+		$replace = array(
+			$articlesInfo['info'],
+			($isInsurance==0)? 'false' : 'true',
+			$insuranceValue,
+			$classificationExplanation,
+			$exportDeclarationNumber,
+			$productClassification,
+			$hasCommercialValue,
+			$deliveryFailureDetails,
+			$articleContents['contents']
+		);
+		
+		$template = file_get_contents($this->getTemplatePath().DS.'international-articleall-template.xml');
+		$int_articles_info = str_replace($search, $replace, $template);
+		return array('info' => $int_articles_info, 'total_weight' => $articlesInfo['total_weight']);
+	}
+	
+	public static function prepareInternationalOrderWeightArticles($data,$order) {
+		$articlesInfo = $this->prepareOrderWeightArticles($data,$order,'',true);
+		$isInsurance = $data['insurance'];
+		$insuranceOrderValue = $data['order_value_insurance'];
+		$insuranceValue = $data['insurance_value'];
+		$classificationExplanation = $data['product_classification_text'];
+		$exportDeclarationNumber = (!empty($data['export_declaration_number']) ? '<exportDeclarationNumber>'. $data['export_declaration_number'] .'</exportDeclarationNumber>' : '<exportDeclarationNumber/>');
+		$productClassification = !empty($data['product_classification'])?$data['product_classification']:991;
+		$hasCommercialValue = !empty($data['has_commercial_value'])?"true":"false";
+		$deliveryFailureDetails = $this->deliveryFailureDetails();
+		$articleContents = $this->getOrderProdItems($data, $order->getId());
+		
+		if(empty($insuranceValue)) {
+			$insuranceValue = '<insuranceValue/>';
+		} else {
+			$insuranceValue = '<insuranceValue>'. trim($insuranceValue) .'</insuranceValue>';
+		}
+		if(!empty($insuranceOrderValue))
+			$insuranceValue = '<insuranceValue>'. trim($articleContents['totalcost']) .'</insuranceValue>';
+		
+		$insuranceValue = ($isInsurance==0)? '<insuranceValue/>' : $insuranceValue;
+		
+		$search = array(
+			'[[preparedarticle]]',
+			'[[isInsuranceRequired]]',
+			'[[insuranceValue]]',
+			'[[classificationExplanation]]',
+			'[[exportDeclarationNumber]]',
+			'[[productClassification]]',
+			'[[hasCommercialValue]]',
+			'[[deliveryFailureDetails]]',
+			'[[contents]]'
+		);
+		
+		$replace = array(
+			$articlesInfo['info'],
+			($isInsurance==0)? 'false' : 'true',
+			$insuranceValue,
+			$classificationExplanation,
+			$exportDeclarationNumber,
+			$productClassification,
+			$hasCommercialValue,
+			$deliveryFailureDetails,
+			$articleContents['contents']
+		);
+		
+		$template = file_get_contents($this->getTemplatePath().DS.'international-articleall-template.xml');
+		$int_articles_info = str_replace($search, $replace, $template);
+		return array('info' => $int_articles_info, 'total_weight' => $articlesInfo['total_weight']);
+	}
+	
+	public function deliveryFailureDetails() {
+		$addressName = trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_name')));
+		$companyName = trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_business_name')));
+		$addressOne = trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line1')));
+		$addressTwo = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_line2'));
+		$suburb = trim($this->xmlData(Mage::getStoreConfig('carriers/linksynceparcel/return_address_suburb')));
+		$stateCode = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_statecode'));
+		$postCode = trim(Mage::getStoreConfig('carriers/linksynceparcel/return_address_postcode'));
+		
+		$deliveryFailureDetails = (!empty($addressName) ? '<deliveryFailureName>'. $addressName .'</deliveryFailureName>' : '<deliveryFailureName/>');
+		$deliveryFailureDetails .= (!empty($companyName) ? '<deliveryFailureCompanyName>'. $companyName .'</deliveryFailureCompanyName>' : '<deliveryFailureCompanyName/>');
+		$deliveryFailureDetails .= '<deliveryFailureAddressLine1>'. $addressOne .'</deliveryFailureAddressLine1>';
+		$deliveryFailureDetails .= '<deliveryFailureAddressLine2>'. $addressTwo .'</deliveryFailureAddressLine2>';
+		$deliveryFailureDetails .= '<deliveryFailureSuburb>'. $suburb .'</deliveryFailureSuburb>';
+		$deliveryFailureDetails .= '<deliveryFailureStateCode>'. $stateCode .'</deliveryFailureStateCode>';
+		$deliveryFailureDetails .= '<deliveryFailurePostcode>'. $postCode .'</deliveryFailurePostcode>';
+		$deliveryFailureDetails .= '<deliveryFailureCountryCode>AU</deliveryFailureCountryCode>';
+		return $deliveryFailureDetails;
+	}
+	
+	public function getOrderProdItems($data, $orderid, $totalonly=false) 
+	{
+		$order = Mage::getModel('sales/order')->load($orderid);
+		$ordered_items = $order->getAllItems();
+		$orderitems = array();
+		if($ordered_items) {
+			$contents = '';
+			$countryOrigin = !empty($data['country_origin'])?$data['country_origin']:trim(Mage::getStoreConfig('carriers/linksynceparcel/default_country_origin'));
+			$hsTariff = !empty($data['hs_tariff'])?$data['hs_tariff']:trim(Mage::getStoreConfig('carriers/linksynceparcel/default_has_tariff'));
+			foreach($ordered_items as $ordered_item) {
+				$ischild = $ordered_item->getParentItemId();
+				if(!$ischild){
+					$qty = $ordered_item->getQtyOrdered();
+					$price = $ordered_item->getPrice();
+					$name = $ordered_item->getName();
+					$weight = $ordered_item->getWeight();
+					if(empty($weight)) {
+						$default_article_weight = Mage::getStoreConfig('carriers/linksynceparcel/default_article_weight');
+
+						if($default_article_weight)
+						{
+							$weight = $default_article_weight;
+						} else {
+							$weight = 0.00;
+						}
+					}
+					$value = intval($price) * intval($qty);
+					$totalCost += $value;
+					
+					$contents .= '<content>';
+					$contents .= '<goodsDescription>'. $name .'</goodsDescription>';
+					$contents .= '<quantity>'. intval($qty) .'</quantity>';
+					$contents .= '<unitValue>'. number_format($price, 2) .'</unitValue>';
+					$contents .= '<value>'. number_format($value, 2) .'</value>';
+					$contents .= '<weight>'. $weight .'</weight>';
+					$contents .= '<countryOriginCode>'. $countryOrigin .'</countryOriginCode>';
+					$contents .= '<hSTariff>'. $hsTariff .'</hSTariff>';
+					$contents .= '</content>';
+				}
+			}
+			return ($totalonly)?$totalCost:array('totalcost' => $totalCost, 'contents' => $contents);
+		} else {
+			return false;
+		}
+	}
+	
+	public function generateDocument($consignmentNumber,$labelContent,$field)
+    {
+		try
+		{
+			if($labelContent)
+			{
+				$name = $consignmentNumber;
+				if($field == 'customdocs') {
+					$name = 'int_'.$name;
+				}
+				$filename = $name.'.pdf';
+				$filepath = Mage::getBaseDir().DS.'media'.DS.'linksync'.DS.'label'.DS.'consignment'.DS.$filename;
+				$handle = fopen($filepath,'wb');
+				fwrite($handle, $labelContent);
+				fclose($handle);
+				Mage::helper('linksynceparcel')->updateConsignmentTable2($consignmentNumber,$field,$filename);
+				Mage::helper('linksynceparcel')->updateConsignmentTable2($consignmentNumber,'is_label_created',1);
+			}
+		}
+		catch(Exception $e)
+		{
+			;//log
+		}
+	}
+	
+	public function isInternationalServiceFilter($service) 
+	{
+		$resource = Mage::getSingleton('core/resource');
+	    $readConnection = $resource->getConnection('core_read');
+	    $table = $resource->getTableName('sales_flat_order');
+
+		$query = "SELECT entity_id FROM {$table} WHERE status='pending' OR status='holded'";
+		$results = $readConnection->fetchAll($query);
+		if($results && count($results) > 0) {
+			$order_ids = array();
+			foreach($results as $result) {
+				$allowedChargeCodes = $this->getChargeCodes();
+				$chargecode = $this->getOrderChargeCode($result['entity_id']);
+				$chargeCodeData = $allowedChargeCodes[$chargecode];
+				if($chargeCodeData['serviceType'] == $service) {
+					$order_ids[] = $result['entity_id'];
+				}
+			}
+			return !empty($order_ids)?$order_ids:false;
+		}
+		return false;
+	}
+
+	public function isDisplayConsignmentViewTableShip()
+	{
+		$resource = Mage::getSingleton('core/resource');
+	    $readConnection = $resource->getConnection('core_read');
+	    $table = $resource->getTableName('linksync_linksynceparcel_nonlinksync');
+
+		$query = "SELECT id FROM {$table}";
+		$results = $readConnection->fetchAll($query);
+		
+		$apply_to_all = Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/apply_to_all');
+		
+		$display = false;
+		if($results || $apply_to_all == 1) {
+			$display = true;
+		}
+		return $display;
+	}
+	
+	public function isDisplayConsignmentViewTableLps()
+	{
+		$display = false;
+		$lps_username = trim(Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/lps_username'));
+		if(!empty($lps_username)) {
+			$display = true;
+		}
+		return $display;
+	}
+	
+	public function isupgraded()
+	{
+		$resource = Mage::getSingleton('core/resource');
+	    $readConnection = $resource->getConnection('core_read');
+	    $table = $resource->getTableName('linksync_linksynceparcel_consignment');
+
+		$query = "SELECT * FROM {$table} LIMIT 1";
+		$results = $readConnection->fetchAll($query);
+		if(!empty($results)) {
+			$c = $results[0];
+			if(array_key_exists('customdocs',$c)) {
+				return true;
+			}
+			return false;
+		}
+		return true;
 	}
 }

@@ -13,6 +13,7 @@ class Linksync_Linksynceparcel_Block_Adminhtml_Nonlinksync_Edit_Tab_Form extends
             'required' => true,
             'name' => 'method',
 			'values' => Mage::helper('linksynceparcel')->getNonlinksyncShippingTypeOptions(),
+			'note' => 'NOTE - when you create a new shipping type for your site IT WILL NOT BE AVAILABLE HERE UNTIL THERE ARE ORDERS USING THE NEW SHIPPING METHOD. We suggestion you create a test order using the new shipping method and then return to this screen to assign the Charge Code to it.'
         ));
 		
         $fieldset->addField('charge_code', 'select', array(

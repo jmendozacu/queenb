@@ -44,72 +44,7 @@ class Linksync_Linksynceparcel_Block_Adminhtml_Consignment_Grid extends Mage_Adm
 			}
 		}
 		
-		if(Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/apply_to_all') && Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/default_chargecode') != '')
-		{
-			$collection = Mage::getModel('linksynceparcel/consignmentui')->getCollection();
-			$collection
-				->getSelect()
-				->joinLeft(array('order_address' => Mage::getSingleton('core/resource')->getTableName('sales_flat_order_address')),
-						'main_table.shipping_address_id = order_address.entity_id')
-				->reset(Zend_Db_Select::COLUMNS)
-				->columns(new Zend_Db_Expr("CONCAT(`order_address`.`firstname`, ' ',`order_address`.`lastname`) AS fullname"))
-				->columns('CONCAT(main_table.entity_id, "_",IFNULL(c.consignment_number,0)) as order_consignment')
-				->columns('main_table.customer_firstname')
-				->columns('main_table.customer_lastname')
-				->columns('main_table.is_address_valid')
-				->columns('main_table.increment_id')
-				->columns('main_table.shipping_method')
-				->columns('main_table.status')
-				->columns('main_table.shipping_description')
-				->columns('c.general_linksynceparcel_shipping_chargecode as general_linksynceparcel_shipping_chargecode')
-				->columns("(case when c.consignment_number != '' then ( select count(*) from ".Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_article')." where consignment_number = c.consignment_number) else null end) as number_of_articles")
-				->columns('is_address_valid as is_not_open')
-				->joinLeft(array('c' => Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_consignment')),
-						'main_table.entity_id = c.order_id and c.despatched=0')
-				->where(' (main_table.shipping_method like "%linksynceparcel%" OR 
-						   		(
-								case 
-								when (select count(*) from '.Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_nonlinksync').' where method = main_table.shipping_description and  charge_code != "none") > 0 
-								then 1 
-								when (select charge_code from '.Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_nonlinksync').' where method = main_table.shipping_description) = "none"
-						   		then 0 
-								else 1
-								end
-								) > 0
-						)')
-				->where(' ('.$status_condition.'
-						   		(case when (select count(*) from '.Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_consignment').' where order_id = main_table.entity_id) > 0 then (select count(*) from '.Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_consignment').' where order_id = main_table.entity_id and despatched = 0) else 0 end) > 0
-						)')
-				->where("order_address.country_id='AU'")
-				;
-			/*echo $collection->getSelect()->__toString();
-			exit;*/
-			$this->setCollection($collection);
-			return parent::_prepareCollection();
-		}
-		else
-		{
-			$collection = Mage::getModel('linksynceparcel/consignmentui')->getCollection();
-			$collection
-				->getSelect()
-				->joinLeft(array('order_address' => Mage::getSingleton('core/resource')->getTableName('sales_flat_order_address')),
-						'main_table.shipping_address_id = order_address.entity_id')
-				->reset(Zend_Db_Select::COLUMNS)
-				->columns(new Zend_Db_Expr("CONCAT(`order_address`.`firstname`, ' ',`order_address`.`lastname`) AS fullname"))
-				->columns('CONCAT(main_table.entity_id, "_",IFNULL(c.consignment_number,0)) as order_consignment')
-				->columns('main_table.customer_firstname')
-				->columns('main_table.customer_lastname')
-				->columns('main_table.is_address_valid')
-				->columns('main_table.increment_id')
-				->columns('main_table.shipping_method')
-				->columns('main_table.status')
-				->columns('main_table.shipping_description')
-				->columns('c.general_linksynceparcel_shipping_chargecode as general_linksynceparcel_shipping_chargecode')
-				->columns("(case when c.consignment_number != '' then ( select count(*) from ".Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_article')." where consignment_number = c.consignment_number) else null end) as number_of_articles")
-				->columns('is_address_valid as is_not_open')
-				->joinLeft(array('c' => Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_consignment')),
-						'main_table.entity_id = c.order_id and c.despatched=0')
-				->where(' (main_table.shipping_method like "%linksynceparcel%" OR 
+		$where = ' (main_table.shipping_method like "%linksynceparcel%" OR 
 						   		(
 								case 
 								when (select count(*) from '.Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_nonlinksync').' where method = main_table.shipping_description and  charge_code != "none") > 0 
@@ -117,32 +52,75 @@ class Linksync_Linksynceparcel_Block_Adminhtml_Consignment_Grid extends Mage_Adm
 								else 0
 								end
 								) > 0
-						)')
-				->where(' ('.$status_condition.' 
-						   		(case when (select count(*) from '.Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_consignment').' where order_id = main_table.entity_id) > 0 then (select count(*) from '.Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_consignment').' where order_id = main_table.entity_id and despatched = 0) else 0 end) > 0
-						)')
-				;
-				
-			/*echo $collection->getSelect()->__toString();
-			exit;*/
-			$this->setCollection($collection);
-			return  parent::_prepareCollection();
+						)';
+		if(Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/apply_to_all') && Mage::helper('linksynceparcel')->getStoreConfig('carriers/linksynceparcel/default_chargecode') != '')
+		{
+			$where = ' (main_table.shipping_method like "%linksynceparcel%" OR 
+							(
+							case 
+							when (select count(*) from '.Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_nonlinksync').' where method = main_table.shipping_description and  charge_code != "none") > 0 
+							then 1 
+							when (select charge_code from '.Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_nonlinksync').' where method = main_table.shipping_description) = "none"
+							then 0 
+							else 1
+							end
+							) > 0
+					)';
 		}
+		$collection = Mage::getModel('linksynceparcel/consignmentui')->getCollection();
+		$collection
+			->getSelect()
+			->joinLeft(array('order_address' => Mage::getSingleton('core/resource')->getTableName('sales_flat_order_address')),
+					'main_table.shipping_address_id = order_address.entity_id')
+			->reset(Zend_Db_Select::COLUMNS)
+			->columns(new Zend_Db_Expr("CONCAT(`order_address`.`firstname`, ' ',`order_address`.`lastname`) AS fullname"))
+			->columns('CONCAT(main_table.entity_id, "_",IFNULL(c.consignment_number,0)) as order_consignment')
+			->columns('main_table.customer_firstname')
+			->columns('main_table.customer_lastname')
+			->columns('main_table.is_address_valid')
+			->columns('main_table.increment_id')
+			->columns('main_table.shipping_method')
+			->columns('main_table.status')
+			->columns('main_table.shipping_description')
+			->columns('c.general_linksynceparcel_shipping_chargecode as general_linksynceparcel_shipping_chargecode')
+			->columns("(case when c.consignment_number != '' then ( select count(*) from ".Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_article')." where consignment_number = c.consignment_number) else null end) as number_of_articles")
+			->columns('is_address_valid as is_not_open')
+			->joinLeft(array('c' => Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_consignment')),
+					'main_table.entity_id = c.order_id and c.despatched=0')
+			->where($where)
+			->where(' ('.$status_condition.'
+							(case when (select count(*) from '.Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_consignment').' where order_id = main_table.entity_id) > 0 then (select count(*) from '.Mage::getSingleton('core/resource')->getTableName('linksync_linksynceparcel_consignment').' where order_id = main_table.entity_id and despatched = 0) else 0 end) > 0
+					)')
+			;
+		/*echo $collection->getSelect()->__toString();
+		exit;*/
+		$this->setCollection($collection);
+		return parent::_prepareCollection();
     }
  
     protected function _prepareColumns()
     {
-		 $this->addColumn('increment_id', array(
-            'header' => Mage::helper('linksynceparcel')->__('Order Number'),
+		$this->addColumn('service', array(
+            'header' => Mage::helper('linksynceparcel')->__('Service'),
+            'align' => 'center',
+            'index' => 'c.general_linksynceparcel_shipping_chargecode',
+			'type' => 'options',
+			'options' => array('standard' => "Std.", 'express' => "Exp.", 'international' => "Int."),
+			'renderer' => 'Linksync_Linksynceparcel_Block_Adminhtml_Renderer_Consignment_Service',
+            'sortable' => true,
+			'filter_condition_callback' => array($this, 'serviceFilter')
+        ));
+		
+		$this->addColumn('increment_id', array(
+            'header' => Mage::helper('linksynceparcel')->__('Order'),
             'align' => 'center',
             'index' => 'increment_id',
-			'filter' => false,
             'sortable' => true,
 			'renderer' => 'Linksync_Linksynceparcel_Block_Adminhtml_Renderer_Consignment_Ordernumber'
         ));
 		
         $this->addColumn('customer_name', array(
-          'header'    => Mage::helper('linksynceparcel')->__('Delivery To'),
+          'header'    => Mage::helper('linksynceparcel')->__('Ship to'),
           'align'     =>'left',
 		  'width'	=> '150px',
           'index'     => 'fullname',
@@ -216,18 +194,31 @@ class Linksync_Linksynceparcel_Block_Adminhtml_Consignment_Grid extends Mage_Adm
 		  'renderer' => 'Linksync_Linksynceparcel_Block_Adminhtml_Renderer_Consignment_Labelprinted'
         ));
 	  
-	  $this->addColumn('is_return_label_printed', array(
-          'header'    => Mage::helper('linksynceparcel')->__('Return Labels Printed?'),
+	  $this->addColumn('is_customdocs_printed', array(
+          'header'    => Mage::helper('linksynceparcel')->__('Customs Docs Printed?'),
           'align'     =>'center',
-          'index'     => 'c.is_return_label_printed',
+          'index'     => 'c.is_customdocs_printed',
 		  'type' => 'options',
           'options' => array(
                 1 => 'Yes',
                 0 => 'No',
           ),
 		  'sortable' => false,
-		  'renderer' => 'Linksync_Linksynceparcel_Block_Adminhtml_Renderer_Consignment_Returnlabelprinted'
+		  'renderer' => 'Linksync_Linksynceparcel_Block_Adminhtml_Renderer_Consignment_Customdocsprinted'
         ));
+	  
+	  // $this->addColumn('is_return_label_printed', array(
+          // 'header'    => Mage::helper('linksynceparcel')->__('Return Labels Printed?'),
+          // 'align'     =>'center',
+          // 'index'     => 'c.is_return_label_printed',
+		  // 'type' => 'options',
+          // 'options' => array(
+                // 1 => 'Yes',
+                // 0 => 'No',
+          // ),
+		  // 'sortable' => false,
+		  // 'renderer' => 'Linksync_Linksynceparcel_Block_Adminhtml_Renderer_Consignment_Returnlabelprinted'
+        // ));
 	  
 	   $this->addColumn('is_next_manifest', array(
           'header'    => Mage::helper('linksynceparcel')->__('Next Manifest?'),
@@ -261,6 +252,19 @@ class Linksync_Linksynceparcel_Block_Adminhtml_Consignment_Grid extends Mage_Adm
          
         return parent::_prepareColumns();
     }
+	
+	protected function serviceFilter($collection, $column)
+	{
+		if (!$value = $column->getFilter()->getValue())
+			return;
+		
+		$ids = Mage::helper('linksynceparcel')->isInternationalServiceFilter($value);
+		$implodes = 0;
+		if(!empty($ids)) {
+			$implodes = implode('","', $ids);
+		}
+		$this->getCollection()->getSelect()->where( "(main_table.entity_id IN ('". $implodes ."'))" );
+	}
 	
 	protected function shippingMethodCondition($collection, $column) 
 	{
@@ -304,6 +308,13 @@ class Linksync_Linksynceparcel_Block_Adminhtml_Consignment_Grid extends Mage_Adm
 			if(count($presetsArray) > 0)
 			{
 				$statuses = array( 0 => 'No', 1 => 'Yes');
+				$classificationoptions = array( 991 => 'Other', 32 => 'Commercial', 31 => 'Gift', 91 => 'Document' );
+				
+				$countryCollection = Mage::getModel('directory/country')->getCollection();
+				$countries = array();
+				foreach($countryCollection as $country) {
+					$countries[$country->getCountryId()] = $country->getName();
+				}
 				
 				$this->getMassactionBlock()->addItem('create', array(
 					 'label'=> Mage::helper('linksynceparcel')->__('Create Consignment'),
@@ -316,14 +327,21 @@ class Linksync_Linksynceparcel_Block_Adminhtml_Consignment_Grid extends Mage_Adm
 								 'label' => Mage::helper('catalog')->__('Article Presets'),
 								 'values' => $presetsArray
 							 ),
-							'edit_default_consignment' => array(
-								 'name' => 'edit_default_consignment',
-								 'type' => 'select',
-								 'label' => Mage::helper('catalog')->__('Edit Consignment Defaults'),
-								 'values' => $statuses,
-								 'onchange' => 'editdefaultconsignment(this)'
+							// 'edit_default_consignment' => array(
+								 // 'name' => 'edit_default_consignment',
+								 // 'type' => 'select',
+								 // 'label' => Mage::helper('catalog')->__('Edit Consignment Defaults'),
+								 // 'values' => $statuses,
+								 // 'onchange' => 'editdefaultconsignment(this)'
+							 // ),
+							'delivery_instruction' => array(
+								 'name' => 'delivery_instruction',
+								 'type' => 'textarea',
+								 'class' => 'consignment-ui-hide',
+								 'label' => Mage::helper('catalog')->__('Delivery instructions'),
+								 'values' => ''
 							 ),
-							'partial_delivery_allowed' => array(
+							 'partial_delivery_allowed' => array(
 								 'name' => 'partial_delivery_allowed',
 								 'type' => 'select',
 								 'class' => 'consignment-ui-hide',
@@ -336,6 +354,13 @@ class Linksync_Linksynceparcel_Block_Adminhtml_Consignment_Grid extends Mage_Adm
 								 'class' => 'consignment-ui-hide',
 								 'label' => Mage::helper('catalog')->__('Delivery signature required?'),
 								 'values' => (Mage::getStoreConfig('carriers/linksynceparcel/signature_required')==1 ? array( 1 => 'Yes', 2 => 'No') : array( 0 => 'No', 1 => 'Yes'))
+							 ),
+							 'safe_drop' => array(
+								 'name' => 'safe_drop',
+								 'type' => 'select',
+								 'class' => 'consignment-ui-hide',
+								 'label' => Mage::helper('catalog')->__('Safe Drop?'),
+								 'values' => (Mage::getStoreConfig('carriers/linksynceparcel/safe_drop')==1 ? array( 1 => 'Yes', 2 => 'No') : array( 0 => 'No', 1 => 'Yes'))
 							 ),
 							'transit_cover_required' => array(
 								 'name' => 'transit_cover_required',
@@ -350,6 +375,80 @@ class Linksync_Linksynceparcel_Block_Adminhtml_Consignment_Grid extends Mage_Adm
 								 'class' => 'consignment-ui-hide',
 								 'label' => Mage::helper('catalog')->__('Transit cover Amount'),
 								 'value' => Mage::getStoreConfig('carriers/linksynceparcel/default_insurance_value')
+							 ),
+							 'insurance' => array(
+								 'name' => 'insurance',
+								 'type' => 'select',
+								 'class' => 'consignment-ui-hide',
+								 'label' => Mage::helper('catalog')->__('Insurance'),
+								 'values' => (Mage::getStoreConfig('carriers/linksynceparcel/int_insurance')==1 ? array( 1 => 'Yes', 0 => 'No') : array( 0 => 'No', 1 => 'Yes')),
+								 'onchange' => 'insuranceconsignment(this)'
+							 ),
+							 'order_value_insurance' => array(
+								 'name' => 'order_value_insurance',
+								 'type' => 'select',
+								 'class' => 'consignment-ui-hide',
+								 'label' => Mage::helper('catalog')->__('Order value as Insured Value'),
+								 'values' => (Mage::getStoreConfig('carriers/linksynceparcel/order_value_insured_value')==1 ? array( 1 => 'Yes', 0 => 'No') : array( 0 => 'No', 1 => 'Yes')),
+								 'onchange' => 'order_value_insuranceconsignment(this)'
+							 ),
+							 'insurance_value' => array(
+								 'name' => 'insurance_value',
+								 'type' => 'text',
+								 'class' => 'consignment-ui-hide',
+								 'label' => Mage::helper('catalog')->__('Insurance value'),
+								 'value' => Mage::getStoreConfig('carriers/linksynceparcel/default_int_insurance_value')
+							 ),
+							 'export_declaration_number' => array(
+								 'name' => 'export_declaration_number',
+								 'type' => 'text',
+								 'class' => 'consignment-ui-hide',
+								 'label' => Mage::helper('catalog')->__('Export Declaration Number'),
+								 'value' => ''
+							 ),
+							 'has_commercial_value' => array(
+								 'name' => 'has_commercial_value',
+								 'type' => 'select',
+								 'class' => 'consignment-ui-hide',
+								 'label' => Mage::helper('catalog')->__('Has Commercial Value?'),
+								 'values' => (Mage::getStoreConfig('carriers/linksynceparcel/has_commercial_value')==1 ? array( 1 => 'Yes', 0 => 'No') : array( 0 => 'No', 1 => 'Yes')),
+								 'onchange' => 'has_commercial_valueconsignment(this)'
+							 ),
+							 'product_classification' => array(
+								 'name' => 'product_classification',
+								 'type' => 'select',
+								 'class' => 'consignment-ui-hide',
+								 'label' => Mage::helper('catalog')->__('Product Classification'),
+								 'values' => $classificationoptions,
+								 'onchange' => 'product_classificationconsignment(this)'
+							 ),
+							 'product_classification_text' => array(
+								 'name' => 'product_classification_text',
+								 'type' => 'text',
+								 'class' => 'consignment-ui-hide',
+								 'label' => Mage::helper('catalog')->__('Classification Explanation'),
+								 'value' => Mage::getStoreConfig('carriers/linksynceparcel/classification_explanation')
+							 ),
+							 'country_origin' => array(
+								 'name' => 'country_origin',
+								 'type' => 'select',
+								 'class' => 'consignment-ui-hide',
+								 'label' => Mage::helper('catalog')->__('Country of Origin'),
+								 'values' => $countries
+							 ),
+							 'hs_tariff' => array(
+								 'name' => 'hs_tariff',
+								 'type' => 'text',
+								 'class' => 'consignment-ui-hide',
+								 'label' => Mage::helper('catalog')->__('HS Tariff'),
+								 'value' => Mage::getStoreConfig('carriers/linksynceparcel/default_has_tariff')
+							 ),
+							 'contents' => array(
+								 'name' => 'contents',
+								 'type' => 'text',
+								 'class' => 'consignment-ui-hide',
+								 'label' => Mage::helper('catalog')->__('Contents'),
+								 'value' => Mage::getStoreConfig('carriers/linksynceparcel/default_contents')
 							 ),
 							'contains_dangerous_goods' => array(
 								 'name' => 'contains_dangerous_goods',
@@ -388,10 +487,10 @@ class Linksync_Linksynceparcel_Block_Adminhtml_Consignment_Grid extends Mage_Adm
 				 'url'  => $this->getUrl('*/*/massGenerateLabels')
 			));
 			
-			$this->getMassactionBlock()->addItem('generatereturnlabels', array(
-				 'label'=> Mage::helper('linksynceparcel')->__('Generate Return Labels'),
-				 'url'  => $this->getUrl('*/*/massGenerateReturnLabels')
-			));
+			// $this->getMassactionBlock()->addItem('generatereturnlabels', array(
+				 // 'label'=> Mage::helper('linksynceparcel')->__('Generate Return Labels'),
+				 // 'url'  => $this->getUrl('*/*/massGenerateReturnLabels')
+			// ));
 			
 			$this->getMassactionBlock()->addItem('unassign', array(
 				 'label'=> Mage::helper('linksynceparcel')->__('Remove from Manifest'),

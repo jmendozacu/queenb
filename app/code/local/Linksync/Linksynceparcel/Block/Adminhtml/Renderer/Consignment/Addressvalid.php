@@ -4,14 +4,24 @@ class Linksync_Linksynceparcel_Block_Adminhtml_Renderer_Consignment_Addressvalid
 {
     public function render(Varien_Object $row)
 	{
-		$valid =  $row->getData($this->getColumn()->getIndex());
-		if($valid)
-		{
-			$imgLink = $this->getSkinUrl("linksynceparcel/images/icon-enabled.png");
-		}
-		else
-		{
-			$imgLink = $this->getSkinUrl("linksynceparcel/images/cancel_icon.gif");
+		$value =  $row->getData('order_consignment');
+		$values = explode('_',$value);
+		$orderId = $values[0];
+		$order = Mage::getModel('sales/order')->load($orderId);
+		$address = $order->getShippingAddress();
+		$country = $address->getCountry();
+		if($country == 'AU') {
+			$valid =  $row->getData($this->getColumn()->getIndex());
+			if($valid)
+			{
+				$imgLink = $this->getSkinUrl("linksynceparcel/images/icon-enabled.png");
+			}
+			else
+			{
+				$imgLink = $this->getSkinUrl("linksynceparcel/images/cancel_icon.gif");
+			}
+		} else {
+			$imgLink = $this->getSkinUrl("linksynceparcel/images/icon-hold.png");
 		}
 		$html = '<img src="'.$imgLink.'" />';
 		return $html;

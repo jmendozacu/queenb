@@ -182,6 +182,7 @@ class Linksync_Linksynceparcel_Adminhtml_ConsignmentController extends Mage_Admi
 				$sameGroup = true;
 				$isExpressCode = false;
 				$isStandardCode = false;
+				$isInternational = false;
 				
 				foreach ($ids as $id) 
 				{
@@ -189,74 +190,94 @@ class Linksync_Linksynceparcel_Adminhtml_ConsignmentController extends Mage_Admi
 					$orderId = (int)($values[0]);
 					
 					$chargeCode = Mage::helper('linksynceparcel')->getOrderChargeCode($orderId);
-					if(!$isExpressCode && Mage::helper('linksynceparcel')->isExpressPostCode($chargeCode))
+					$chargeCodes = Mage::helper('linksynceparcel')->getChargeCodes();
+					$chargeCodeData = $chargeCodes[$chargeCode];
+					if($chargeCodeData['serviceType'] == 'express')
 						$isExpressCode = true;
-					if(!$isStandardCode && Mage::helper('linksynceparcel')->isLinksynceparcelStandardCode($chargeCode))
+					if($chargeCodeData['serviceType'] == 'standard')
 						$isStandardCode = true;
+					if($chargeCodeData['serviceType'] == 'international')
+						$isInternational = true;
 				}
 				
-				if (!($isExpressCode && $isStandardCode))
-				{
-					$consignmentNumbers = array();
-					foreach ($ids as $id) 
-					{
-						$values = explode('_',$id);
-						$orderId = (int)($values[0]);
-						$consignmentNumber = $values[1];
-						$order = Mage::getModel('sales/order')->load($orderId);
-						$incrementId = $order->getIncrementId();
-						if($consignmentNumber != '0')
+				if(!$isInternational) {
+					$valid = true;
+					if($isExpressCode && $isStandardCode) {
+						$valid = false;
+					}
+					if($isExpressCode && $isInternational) {
+						$valid = false;
+					}
+					if($isStandardCode && $isInternational) {
+						$valid = false;
+					}
+					
+					if($valid) {
+						$consignmentNumbers = array();
+						$chargeCodes = array();
+						foreach ($ids as $id) 
 						{
-							$consignmentNumbers[] = $consignmentNumber;
-							
-							$labelContent = Mage::getModel('linksynceparcel/api')->getLabelsByConsignments($consignmentNumber);
+							$values = explode('_',$id);
+							$orderId = (int)($values[0]);
+							$consignmentNumber = $values[1];
+							$order = Mage::getModel('sales/order')->load($orderId);
+							$incrementId = $order->getIncrementId();
+							if($consignmentNumber != '0')
+							{
+								$consignmentNumbers[] = $consignmentNumber;
+								
+								$chargeCode = Mage::helper('linksynceparcel')->getOrderChargeCode($orderId,$consignmentNumber);
+								$chargeCodes[] = $chargeCode;
+								$labelContent = Mage::getModel('linksynceparcel/api')->getLabelsByConsignments($consignmentNumber,$chargeCode);
+								if($labelContent)
+								{
+									$filename = $consignmentNumber.'.pdf';
+									$filepath = Mage::getBaseDir().DS.'media'.DS.'linksync'.DS.'label'.DS.'consignment'.DS.$filename;
+									$handle = fopen($filepath,'wb');
+									fwrite($handle, $labelContent);
+									fclose($handle);
+		
+									Mage::helper('linksynceparcel')->updateConsignmentTable($orderId,$consignmentNumber,'label', $filename);
+									Mage::helper('linksynceparcel')->updateConsignmentTable($orderId,$consignmentNumber,'is_label_created', 1);
+									Mage::helper('linksynceparcel')->updateConsignmentTable($orderId,$consignmentNumber,'is_label_printed', 1);
+								}
+							}
+						}
+						
+						if(count($consignmentNumbers) > 0)
+						{
+							$labelContent = Mage::getModel('linksynceparcel/api')->getLabelsByConsignments(implode(',',$consignmentNumbers),$chargeCodes[0]);
 							if($labelContent)
 							{
-								$filename = $consignmentNumber.'.pdf';
+								$filename = 'bulk-consignments-label.pdf';
 								$filepath = Mage::getBaseDir().DS.'media'.DS.'linksync'.DS.'label'.DS.'consignment'.DS.$filename;
 								$handle = fopen($filepath,'wb');
 								fwrite($handle, $labelContent);
 								fclose($handle);
-	
-								Mage::helper('linksynceparcel')->updateConsignmentTable($orderId,$consignmentNumber,'label', $filename);
-								Mage::helper('linksynceparcel')->updateConsignmentTable($orderId,$consignmentNumber,'is_label_created', 1);
-								Mage::helper('linksynceparcel')->updateConsignmentTable($orderId,$consignmentNumber,'is_label_printed', 1);
+								$labelLink = Mage::helper('linksynceparcel')->getConsignmentLabelUrl();
+								$success = Mage::helper('linksynceparcel')->__('Label is generated. <a href="%s" target="_blank" style="color:blue; font-weight:bold; font-size:14px; text-decoration:underline">Please click here to view it.</a>',$labelLink.$filename.'?'.time());
+								Mage::getSingleton('adminhtml/session')->addSuccess($success);
+								/*Mage::app()->getFrontController()->getResponse()->setRedirect($labelLink.$filename)->sendResponse();
+								$this->_redirectUrl($labelLink.$filename);
+								exit;*/
 							}
-						}
-					}
-					
-					if(count($consignmentNumbers) > 0)
-					{
-						$labelContent = Mage::getModel('linksynceparcel/api')->getLabelsByConsignments(implode(',',$consignmentNumbers));
-						if($labelContent)
-						{
-							$filename = 'bulk-consignments-label.pdf';
-							$filepath = Mage::getBaseDir().DS.'media'.DS.'linksync'.DS.'label'.DS.'consignment'.DS.$filename;
-							$handle = fopen($filepath,'wb');
-							fwrite($handle, $labelContent);
-							fclose($handle);
-							$labelLink = Mage::helper('linksynceparcel')->getConsignmentLabelUrl();
-							$success = Mage::helper('linksynceparcel')->__('Label is generated. <a href="%s" target="_blank" style="color:blue; font-weight:bold; font-size:14px; text-decoration:underline">Please click here to view it.</a>',$labelLink.$filename.'?'.time());
-							Mage::getSingleton('adminhtml/session')->addSuccess($success);
-							/*Mage::app()->getFrontController()->getResponse()->setRedirect($labelLink.$filename)->sendResponse();
-							$this->_redirectUrl($labelLink.$filename);
-							exit;*/
+							else
+							{
+								$error = Mage::helper('linksynceparcel')->__('Failed to generate label');
+								Mage::getSingleton('adminhtml/session')->addError($error);
+							}
 						}
 						else
 						{
-							$error = Mage::helper('linksynceparcel')->__('Failed to generate label');
+							$error = Mage::helper('linksynceparcel')->__('None of the selected items have consignments');
 							Mage::getSingleton('adminhtml/session')->addError($error);
 						}
-					}
-					else
-					{
-						$error = Mage::helper('linksynceparcel')->__('None of the selected items have consignments');
+					} else {
+						$error = Mage::helper('linksynceparcel')->__('You can only print multiple consignment labels for the same Delivery Type - they must be all Express Post or all eParcel Standard.');
 						Mage::getSingleton('adminhtml/session')->addError($error);
 					}
-				}
-				else
-				{
-					$error = Mage::helper('linksynceparcel')->__('You can only print multiple consignment labels for the same Delivery Type - they must be all Express Post or all eParcel Standard.');
+				} else {
+					$error = Mage::helper('linksynceparcel')->__('At this time linksync does not support bulk label creation for international consignments.');
 					Mage::getSingleton('adminhtml/session')->addError($error);
 				}
             } 
@@ -491,67 +512,75 @@ class Linksync_Linksynceparcel_Adminhtml_ConsignmentController extends Mage_Admi
 					$data['notify_customers'] = 0;
 				}
 				
-				
-				
                 foreach ($ids as $id) 
 				{
 					$values = explode('_',$id);
 					$orderId = (int)($values[0]);
 					$order = Mage::getModel('sales/order')->load($orderId);
 					$incrementId = $order->getIncrementId();
-					
-					if(!$order->getIsAddressValid())
-					{
-						$error = Mage::helper('linksynceparcel')->__('Order #%s: Please validate the address before creating consignment', $incrementId);
-						Mage::getSingleton('adminhtml/session')->addError($error);
-					}
-					else
-					{
-						try 
+					$address = $order->getShippingAddress();
+					$country = $order->getCountry();
+					$validateInt = Mage::helper('linksynceparcel')->validateInternationalConsignment($data, $order);
+					if($country != 'AU' && $validate != false) {
+						$errors = implode('<br>', $validate);
+						Mage::getSingleton('adminhtml/session')->addError($errors);
+					} else {
+						if(!$order->getIsAddressValid() && $country == 'AU')
 						{
-							
-							if($data['partial_delivery_allowed'])
+							$error = Mage::helper('linksynceparcel')->__('Order #%s: Please validate the address before creating consignment', $incrementId);
+							Mage::getSingleton('adminhtml/session')->addError($error);
+						}
+						else
+						{
+							try 
 							{
-								if(Mage::helper('linksynceparcel')->isDisablePartialDeliveryMethod($order->getId()))
-								{
-									$data['partial_delivery_allowed'] = 0;
-								}
-							}
-							
-							$articleData = Mage::helper('linksynceparcel')->prepareArticleDataBulk($data, $order);
-							$content = $articleData['content'];
-							$chargeCode = $articleData['charge_code'];
-							$total_weight = $articleData['total_weight'];
-							$consignmentData = Mage::getModel('linksynceparcel/api')->createConsignment($content);
-							if($consignmentData)
-							{
-								$consignmentNumber = $consignmentData->consignmentNumber;
-								$manifestNumber = $consignmentData->manifestNumber;
 								
-								Mage::helper('linksynceparcel')->insertConsignment($orderId,$consignmentNumber,$data,$manifestNumber,$chargeCode,$total_weight);
-								//Mage::helper('linksynceparcel')->insertBulkArticles($orderId,$consignmentNumber,$consignmentData->articles,$data);
-								Mage::helper('linksynceparcel')->updateArticles($orderId,$consignmentNumber,$consignmentData->articles,$data,$content);
-								Mage::helper('linksynceparcel')->insertManifest($manifestNumber);
-						
-								Mage::helper('linksynceparcel')->labelCreate($consignmentNumber);
-								if($data['print_return_labels'])
+								if($data['partial_delivery_allowed'])
 								{
-									Mage::helper('linksynceparcel')->returnLabelCreate($consignmentNumber);
+									if(Mage::helper('linksynceparcel')->isDisablePartialDeliveryMethod($order->getId()))
+									{
+										$data['partial_delivery_allowed'] = 0;
+									}
 								}
+								
+								$articleData = Mage::helper('linksynceparcel')->prepareArticleDataBulk($data, $order);
+								$content = $articleData['content'];
+								$chargeCode = $articleData['charge_code'];
+								$total_weight = $articleData['total_weight'];
+								$consignmentData = Mage::getModel('linksynceparcel/api')->createConsignment($content,0,$chargeCode);
+								if($consignmentData)
+								{
+									$consignmentNumber = $consignmentData->consignmentNumber;
+									$manifestNumber = $consignmentData->manifestNumber;
+									
+									Mage::helper('linksynceparcel')->insertConsignment($orderId,$consignmentNumber,$data,$manifestNumber,$chargeCode,$total_weight,$country);
+									Mage::helper('linksynceparcel')->updateArticles($orderId,$consignmentNumber,$consignmentData->articles,$data,$content);
+									Mage::helper('linksynceparcel')->insertManifest($manifestNumber);
+							
+									if($country == 'AU') {
+										$labelContent = $consignmentData->lpsLabels->labels->label;
+										Mage::helper('linksynceparcel')->generateDocument($consignmentNumber,$labelContent,'label');
+									} else {
+										$labelContent = $consignmentData->lpsLabels->labels->label;
+										$docsContent = $consignmentData->lpsLabels->labels->customDocs;
+										Mage::helper('linksynceparcel')->generateDocument($consignmentNumber,$labelContent,'label');
+										Mage::helper('linksynceparcel')->generateDocument($consignmentNumber,$docsContent,'customdocs');
+									}
 
-								$successmsg = Mage::helper('linksynceparcel')->__('Order #%s: Consignment #%s created successfully', $incrementId,$consignmentNumber);
-								Mage::getSingleton('adminhtml/session')->addSuccess($successmsg);
+									$successmsg = Mage::helper('linksynceparcel')->__('Order #%s: Consignment #%s created successfully', $incrementId,$consignmentNumber);
+									Mage::getSingleton('adminhtml/session')->addSuccess($successmsg);
+								}
+								else
+								{
+									$error = Mage::helper('linksynceparcel')->__('Order #%s: Failed to create consignment',$incrementId);
+									Mage::getSingleton('adminhtml/session')->addError($error);
+								}
 							}
-							else
+							catch (Exception $e) 
 							{
-								$error = Mage::helper('linksynceparcel')->__('Order #%s: Failed to create consignment',$incrementId);
+								$error = Mage::helper('linksynceparcel')->__('Order #%s, Error: %s', $incrementId, $e->getMessage());
 								Mage::getSingleton('adminhtml/session')->addError($error);
 							}
-						}
-						catch (Exception $e) 
-						{
-							$error = Mage::helper('linksynceparcel')->__('Order #%s, Error: %s', $incrementId, $e->getMessage());
-							Mage::getSingleton('adminhtml/session')->addError($error);
 						}
 					}
                 }
